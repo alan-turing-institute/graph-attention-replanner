@@ -1,0 +1,2537 @@
+From 7ac87b24a2b60b9a298bd6926715e6ef35449eac Mon Sep 17 00:00:00 2001
+From: elim <ekwan@turing.ac.uk>
+Date: Mon, 4 Aug 2025 15:21:06 +0100
+Subject: [PATCH] Enable replanner.
+
+---
+ rl4co/envs/__init__.py                           |  10 +
+ rl4co/envs/routing/__init__.py                   |  10 +
+ rl4co/envs/routing/mpdp/generator.py             |   2 +-
+ rl4co/envs/routing/mtsp/env.py                   |   4 +-
+ rl4co/envs/routing/mtsp/generator.py             |   2 +-
+ rl4co/envs/routing/mtsp/render.py                |   2 +-
+ rl4co/envs/routing/mtsp_custom/env1.py           | 172 ++++++++++++
+ rl4co/envs/routing/mtsp_custom/env2.py           | 198 ++++++++++++++
+ rl4co/envs/routing/mtsp_custom/env3.py           | 290 ++++++++++++++++++++
+ rl4co/envs/routing/mtsp_custom/env4.py           | 300 +++++++++++++++++++++
+ rl4co/envs/routing/mtsp_custom/env5.py           | 322 +++++++++++++++++++++++
+ rl4co/envs/routing/mtsp_custom/env_base.py       | 156 +++++++++++
+ rl4co/envs/routing/mtsp_custom/generator1.py     |  39 +++
+ rl4co/envs/routing/mtsp_custom/generator2.py     |  48 ++++
+ rl4co/envs/routing/mtsp_custom/generator3.py     |  43 +++
+ rl4co/envs/routing/mtsp_custom/generator4.py     |  53 ++++
+ rl4co/envs/routing/mtsp_custom/generator5.py     | 211 +++++++++++++++
+ rl4co/envs/routing/mtsp_custom/generator_base.py | 166 ++++++++++++
+ rl4co/envs/routing/mtsp_custom/render.py         | 141 ++++++++++
+ rl4co/models/nn/env_embeddings/context.py        |   9 +-
+ rl4co/models/nn/env_embeddings/dynamic.py        |   5 +
+ rl4co/models/nn/env_embeddings/edge.py           |   4 +
+ rl4co/models/nn/env_embeddings/init.py           |  29 ++
+ rl4co/utils/ops.py                               |   2 +-
+ rl4co/utils/test_utils.py                        |  10 +
+ tests/test_policy.py                             |   5 +
+ 26 files changed, 2226 insertions(+), 7 deletions(-)
+ create mode 100644 rl4co/envs/routing/mtsp_custom/env1.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/env2.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/env3.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/env4.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/env5.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/env_base.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/generator1.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/generator2.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/generator3.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/generator4.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/generator5.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/generator_base.py
+ create mode 100644 rl4co/envs/routing/mtsp_custom/render.py
+
+diff --git a/rl4co/envs/__init__.py b/rl4co/envs/__init__.py
+index 33d3eb6..6914241 100644
+--- a/rl4co/envs/__init__.py
++++ b/rl4co/envs/__init__.py
+@@ -16,6 +16,11 @@ from rl4co.envs.routing import (
+     DenseRewardTSPEnv,
+     MDCPDPEnv,
+     MTSPEnv,
++    MTSPEnv_Type1,
++    MTSPEnv_Type2,
++    MTSPEnv_Type3,
++    MTSPEnv_Type4,
++    MTSPEnv_Type5,
+     MTVRPEnv,
+     OPEnv,
+     PCTSPEnv,
+@@ -44,6 +49,11 @@ ENV_REGISTRY = {
+     "fjsp": FJSPEnv,
+     "mdpp": MDPPEnv,
+     "mtsp": MTSPEnv,
++    "mtsp1": MTSPEnv_Type1,
++    "mtsp2": MTSPEnv_Type2,
++    "mtsp3": MTSPEnv_Type3,
++    "mtsp4": MTSPEnv_Type4,
++    "mtsp5": MTSPEnv_Type5,
+     "op": OPEnv,
+     "pctsp": PCTSPEnv,
+     "pdp": PDPEnv,
+diff --git a/rl4co/envs/routing/__init__.py b/rl4co/envs/routing/__init__.py
+index acd8564..12c1bf1 100644
+--- a/rl4co/envs/routing/__init__.py
++++ b/rl4co/envs/routing/__init__.py
+@@ -9,6 +9,16 @@ from rl4co.envs.routing.mdcpdp.env import MDCPDPEnv
+ from rl4co.envs.routing.mdcpdp.generator import MDCPDPGenerator
+ from rl4co.envs.routing.mtsp.env import MTSPEnv
+ from rl4co.envs.routing.mtsp.generator import MTSPGenerator
++from rl4co.envs.routing.mtsp_custom.env1 import MTSPEnv_Type1
++from rl4co.envs.routing.mtsp_custom.env2 import MTSPEnv_Type2
++from rl4co.envs.routing.mtsp_custom.env3 import MTSPEnv_Type3
++from rl4co.envs.routing.mtsp_custom.env4 import MTSPEnv_Type4
++from rl4co.envs.routing.mtsp_custom.env5 import MTSPEnv_Type5
++from rl4co.envs.routing.mtsp_custom.generator1 import MTSPGenerator_Type1
++from rl4co.envs.routing.mtsp_custom.generator2 import MTSPGenerator_Type2
++from rl4co.envs.routing.mtsp_custom.generator3 import MTSPGenerator_Type3
++from rl4co.envs.routing.mtsp_custom.generator4 import MTSPGenerator_Type4
++from rl4co.envs.routing.mtsp_custom.generator5 import MTSPGenerator_Type5
+ from rl4co.envs.routing.mtvrp.env import MTVRPEnv
+ from rl4co.envs.routing.mtvrp.generator import MTVRPGenerator
+ from rl4co.envs.routing.op.env import OPEnv
+diff --git a/rl4co/envs/routing/mpdp/generator.py b/rl4co/envs/routing/mpdp/generator.py
+index a1b9140..a66ffcb 100644
+--- a/rl4co/envs/routing/mpdp/generator.py
++++ b/rl4co/envs/routing/mpdp/generator.py
+@@ -93,7 +93,7 @@ class MPDPGenerator(Generator):
+             {
+                 "locs": locs,
+                 "depot": depot,
+-                "num_agents": num_agents,
++                "num_agent": num_agents,
+             },
+             batch_size=batch_size,
+         )
+diff --git a/rl4co/envs/routing/mtsp/env.py b/rl4co/envs/routing/mtsp/env.py
+index bf39cf7..feba086 100644
+--- a/rl4co/envs/routing/mtsp/env.py
++++ b/rl4co/envs/routing/mtsp/env.py
+@@ -86,7 +86,7 @@ class MTSPEnv(RL4COEnvBase):
+         # - current_node is the depot
+         # - agent_idx greater than num_agents -1
+         available[..., 0] = torch.logical_and(
+-            current_node != 0, td["agent_idx"] < td["num_agents"] - 1
++            current_node != 0, td["agent_idx"] < td["num_agent"] - 1
+         )
+ 
+         # We are done there are no unvisited locations except the depot
+@@ -153,7 +153,7 @@ class MTSPEnv(RL4COEnvBase):
+         return TensorDict(
+             {
+                 "locs": td["locs"],  # depot is first node
+-                "num_agents": td["num_agents"],
++                "num_agent": td["num_agent"],
+                 "max_subtour_length": max_subtour_length,
+                 "current_length": current_length,
+                 "agent_idx": agent_idx,
+diff --git a/rl4co/envs/routing/mtsp/generator.py b/rl4co/envs/routing/mtsp/generator.py
+index d240258..9c3f3b1 100644
+--- a/rl4co/envs/routing/mtsp/generator.py
++++ b/rl4co/envs/routing/mtsp/generator.py
+@@ -66,7 +66,7 @@ class MTSPGenerator(Generator):
+         return TensorDict(
+             {
+                 "locs": locs,
+-                "num_agents": num_agents,
++                "num_agent": num_agents,
+             },
+             batch_size=batch_size,
+         )
+diff --git a/rl4co/envs/routing/mtsp/render.py b/rl4co/envs/routing/mtsp/render.py
+index 7b76ce3..0281f19 100644
+--- a/rl4co/envs/routing/mtsp/render.py
++++ b/rl4co/envs/routing/mtsp/render.py
+@@ -24,7 +24,7 @@ def render(td, actions=None, ax=None):
+         td = td[0]
+         actions = actions[0]
+ 
+-    num_agents = td["num_agents"]
++    num_agents = td["num_agent"]
+     locs = td["locs"]
+     cmap = discrete_cmap(num_agents, "rainbow")
+ 
+diff --git a/rl4co/envs/routing/mtsp_custom/env1.py b/rl4co/envs/routing/mtsp_custom/env1.py
+new file mode 100644
+index 0000000..b803045
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/env1.py
+@@ -0,0 +1,172 @@
++from typing import Optional
++
++import torch
++
++from tensordict.tensordict import TensorDict
++from torchrl.data import TensorSpec, UnboundedDiscreteTensorSpec
++
++from rl4co.envs.common.utils import batch_to_scalar
++from rl4co.utils.ops import gather_by_index, get_distance, get_tour_length
++
++from .env_base import MTSPEnvBase
++from .generator1 import MTSPGenerator_Type1
++
++
++class MTSPEnv_Type1(MTSPEnvBase):
++    name = "mtsp1"
++
++    def set_generator(self, generator: MTSPGenerator_Type1, generator_params: dict = {}):
++        if generator is None:
++            generator = MTSPGenerator_Type1(**generator_params)
++        return generator
++
++    def _get_obs_elements(self, generator: MTSPGenerator_Type1) -> dict[str, TensorSpec]:
++        args = self._obs_base_elements(generator)
++        return args
++
++    @staticmethod
++    def _step(td: TensorDict) -> TensorDict:
++        # Initial variables
++        current_node = td["action"]
++        # first_node = current_node if is_first_action else td["first_node"]
++
++        # Get the locations of the current node and the previous node and the depot
++        cur_loc = gather_by_index(td["locs"], current_node)
++        prev_loc = gather_by_index(
++            td["locs"], td["current_node"]
++        )  # current_node is the previous node
++        depot_loc = td["locs"][..., 0, :]
++
++        # If current_node is the depot, then increment agent_idx
++        cur_agent_idx = td["agent_idx"] + (current_node == 0).long()
++
++        # Set not visited to 0 (i.e., we visited the node)
++        available = td["action_mask"].scatter(
++            -1, current_node[..., None].expand_as(td["action_mask"]), 0
++        )
++        # Available[..., 0] is the depot, which is always available unless:
++        # - current_node is the depot
++        # - agent_idx greater than num_agent -1
++        available[..., 0] = torch.logical_and(
++            current_node != 0, td["agent_idx"] < td["num_agent"] - 1
++        )
++
++        # We are done there are no unvisited locations except the depot
++        done = torch.count_nonzero(available[..., 1:], dim=-1) == 0
++
++        # If done is True, then we make the depot available again, so that it will be selected as the next node with prob 1
++        available[..., 0] = torch.logical_or(done, available[..., 0])
++
++        # Update the current length
++        current_length = td["current_length"] + get_distance(cur_loc, prev_loc)
++
++        # If done, we add the distance from the current_node to the depot as well
++        current_length = torch.where(
++            done, current_length + get_distance(cur_loc, depot_loc), current_length
++        )
++
++        # We update the max_subtour_length and reset the current_length
++        max_subtour_length = torch.where(
++            current_length > td["max_subtour_length"],
++            current_length,
++            td["max_subtour_length"],
++        )
++
++        # If current agent is different from previous agent, then we have a new subtour and reset the length
++        current_length *= (cur_agent_idx == td["agent_idx"]).float()
++
++        # The reward is the negative of the max_subtour_length (minmax objective)
++        reward = -max_subtour_length
++
++        td.update(
++            {
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": cur_agent_idx,
++                # "first_node": first_node,
++                "current_node": current_node,
++                "i": td["i"] + 1,
++                "action_mask": available,
++                "reward": reward,
++                "done": done,
++            }
++        )
++
++        return td
++
++    def _reset(self, td: Optional[TensorDict] = None, batch_size=None) -> TensorDict:
++        device = td.device
++
++        # Keep track of the agent number to know when to stop
++        agent_idx = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        # Make variable for max_subtour_length between subtours
++        max_subtour_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++        current_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++
++        # Other variables
++        current_node = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++        available = torch.ones(
++            (*batch_size, self.generator.num_node_incl_home),
++            dtype=torch.bool,
++            device=device,
++        )  # 1 means not visited, i.e. action is allowed
++        available[..., 0] = 0  # Depot is not available as first node
++        i = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        return TensorDict(
++            {
++                "locs": td["locs"],  # depot is first node
++                "num_agent": td["num_agent"],
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": agent_idx,
++                "current_node": current_node,
++                "i": i,
++                "action_mask": available,
++            },
++            batch_size=batch_size,
++        )
++
++    def get_reward_with_new_locs(self, td=None, actions=None):
++        """
++        Calculate the reward with new locations and same actions. Expected input size:
++        locs: (batch_size, num_loc, 2)
++        actions: (batch_size, num_loc + num_agent)
++        task_lengths: (batch_size, num_loc)
++        """
++        locs = td["locs"]
++        dummy = locs[:, -1].unsqueeze(1).expand(-1, actions.shape[1] - locs.shape[1], -1)
++        locs = torch.cat((locs, dummy), dim=1)
++        actions = actions.unsqueeze(-1).expand(-1, -1, locs.shape[2])
++        locs_ordered = locs.gather(1, actions)
++        depot_loc = locs[:, 0].unsqueeze(1)
++        locs_ordered = torch.cat(
++            (depot_loc, locs_ordered, depot_loc), dim=1
++        )  # Add depot to start and end
++
++        longest_tour_distances = []
++        batch_size = locs.shape[0]
++        for batch in range(batch_size):
++            distances = []
++            home_indices = (actions[batch, :, 0] == 0).nonzero(as_tuple=True)[0] + 1
++            zero = torch.zeros(1).to(locs.device)
++            end = torch.Tensor([locs_ordered.shape[1]]).to(locs.device)
++            home_indices = torch.cat((zero, home_indices, end), dim=0).type(
++                torch.int64
++            )  # Add it started from depot
++
++            for i in range(len(home_indices) - 1):
++                tour_locations = locs_ordered[
++                    batch, home_indices[i] : home_indices[i + 1]
++                ].unsqueeze(0)
++                distance = get_tour_length(tour_locations)
++                distances.append(distance)
++            # Convert the list of distances to a tensor for easy manipulation
++            distances_tensor = torch.tensor(distances)
++
++            # Find the distance of the longest tour
++            longest_tour_distance = torch.max(distances_tensor)
++            longest_tour_distances.append(longest_tour_distance)
++
++        return torch.tensor(longest_tour_distances)
+diff --git a/rl4co/envs/routing/mtsp_custom/env2.py b/rl4co/envs/routing/mtsp_custom/env2.py
+new file mode 100644
+index 0000000..aa24d12
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/env2.py
+@@ -0,0 +1,198 @@
++import math
++
++from typing import Optional
++
++import torch
++
++from tensordict.tensordict import TensorDict
++from torchrl.data import BoundedTensorSpec, TensorSpec, UnboundedDiscreteTensorSpec
++
++from rl4co.envs.common.utils import batch_to_scalar
++from rl4co.utils.ops import gather_by_index, get_distance, get_tour_length
++
++from .env_base import MTSPEnvBase
++from .generator2 import MTSPGenerator_Type2
++
++
++class MTSPEnv_Type2(MTSPEnvBase):
++    name = "mtsp2"
++
++    def set_generator(self, generator: MTSPGenerator_Type2, generator_params: dict = {}):
++        if generator is None:
++            generator = MTSPGenerator_Type2(**generator_params)
++        return generator
++
++    def _get_obs_elements(self, generator: MTSPGenerator_Type2) -> dict[str, TensorSpec]:
++        args = self._obs_base_elements(generator)
++        max_dist_between_nodes = math.sqrt(generator.max_loc - generator.min_loc)
++        max_cost = max_dist_between_nodes * generator.max_task_length
++        args["cost_matrix"] = BoundedTensorSpec(
++            low=0,
++            high=max_cost,
++            shape=(
++                generator.num_node_incl_home,
++                generator.num_node_incl_home,
++            ),  # if have start loc generator.num_node_incl_home+generator.max_num_agent
++            dtype=torch.float32,
++        )
++        return args
++
++    @staticmethod
++    def _step(td: TensorDict) -> TensorDict:
++        # Initial variables
++        current_node = td["action"]
++        # first_node = current_node if is_first_action else td["first_node"]
++
++        # Get the locations of the current node and the previous node and the depot
++        cur_loc = gather_by_index(td["locs"], current_node)
++        prev_loc = gather_by_index(
++            td["locs"], td["current_node"]
++        )  # current_node is the previous node
++        depot_loc = td["locs"][..., 0, :]
++
++        # If current_node is the depot, then increment agent_idx
++        cur_agent_idx = td["agent_idx"] + (current_node == 0).long()
++
++        # Set not visited to 0 (i.e., we visited the node)
++        available = td["action_mask"].scatter(
++            -1, current_node[..., None].expand_as(td["action_mask"]), 0
++        )
++        # Available[..., 0] is the depot, which is always available unless:
++        # - current_node is the depot
++        # - agent_idx greater than num_agent -1
++        available[..., 0] = torch.logical_and(
++            current_node != 0, td["agent_idx"] < td["num_agent"] - 1
++        )
++
++        # We are done there are no unvisited locations except the depot
++        done = torch.count_nonzero(available[..., 1:], dim=-1) == 0
++
++        # If done is True, then we make the depot available again, so that it will be selected as the next node with prob 1
++        available[..., 0] = torch.logical_or(done, available[..., 0])
++
++        cur_loc_task_length = gather_by_index(td["task_length"], current_node)
++        # Update the current length
++        current_length = (
++            td["current_length"] + get_distance(cur_loc, prev_loc) + cur_loc_task_length
++        )
++
++        # If done, we add the distance from the current_node to the depot as well
++        current_length = torch.where(
++            done, current_length + get_distance(cur_loc, depot_loc), current_length
++        )
++
++        # We update the max_subtour_length and reset the current_length
++        max_subtour_length = torch.where(
++            current_length > td["max_subtour_length"],
++            current_length,
++            td["max_subtour_length"],
++        )
++
++        # If current agent is different from previous agent, then we have a new subtour and reset the length
++        current_length *= (cur_agent_idx == td["agent_idx"]).float()
++
++        # The reward is the negative of the max_subtour_length (minmax objective)
++        reward = -max_subtour_length
++
++        td.update(
++            {
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": cur_agent_idx,
++                # "first_node": first_node,
++                "current_node": current_node,
++                "i": td["i"] + 1,
++                "action_mask": available,
++                "reward": reward,
++                "done": done,
++            }
++        )
++
++        return td
++
++    def _reset(self, td: Optional[TensorDict] = None, batch_size=None) -> TensorDict:
++        device = td.device
++
++        # Keep track of the agent number to know when to stop
++        agent_idx = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        # Make variable for max_subtour_length between subtours
++        max_subtour_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++        current_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++
++        # Other variables
++        current_node = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++        available = torch.ones(
++            (*batch_size, self.generator.num_node_incl_home),
++            dtype=torch.bool,
++            device=device,
++        )  # 1 means not visited, i.e. action is allowed
++        available[..., 0] = 0  # Depot is not available as first node
++        i = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        cost_matrix = self.convert_loc_to_cost_matrix(
++            td["locs"], td["task_length"]
++        )
++
++        return TensorDict(
++            {
++                "locs": td["locs"],  # depot is first node
++                "task_length": td["task_length"],
++                "num_agent": td["num_agent"],
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": agent_idx,
++                "current_node": current_node,
++                "i": i,
++                "action_mask": available,
++                "cost_matrix": cost_matrix,
++            },
++            batch_size=batch_size,
++        )
++
++    def get_reward_with_new_locs(self, td=None, actions=None):
++        """
++        Calculate the reward with new locations and same actions. Expected input size:
++        locs: (batch_size, num_loc, 2)
++        actions: (batch_size, num_loc + num_agent)
++        task_lengths: (batch_size, num_loc)
++        """
++        locs = td["locs"]
++        task_lengths = td["task_length"]
++
++        dummy = locs[:, -1].unsqueeze(1).expand(-1, actions.shape[1] - locs.shape[1], -1)
++        locs = torch.cat((locs, dummy), dim=1)
++        actions = actions.unsqueeze(-1).expand(-1, -1, locs.shape[2])
++        locs_ordered = locs.gather(1, actions)
++        depot_loc = locs[:, 0].unsqueeze(1)
++        locs_ordered = torch.cat(
++            (depot_loc, locs_ordered, depot_loc), dim=1
++        )  # Add depot to start and end
++
++        longest_tour_distances = []
++        batch_size = locs.shape[0]
++        for batch in range(batch_size):
++            distances = []
++            home_indices = (actions[batch, :, 0] == 0).nonzero(as_tuple=True)[0] + 1
++            zero = torch.zeros(1).to(locs.device)
++            end = torch.Tensor([locs_ordered.shape[1]]).to(locs.device)
++            home_indices = torch.cat((zero, home_indices, end), dim=0).type(
++                torch.int64
++            )  # Add it started from depot
++
++            for i in range(len(home_indices) - 1):
++                a = actions[batch, home_indices[i] : home_indices[i + 1], 0]
++                task_time_acc = torch.sum(task_lengths[batch, a], dim=0)
++                tour_locations = locs_ordered[
++                    batch, home_indices[i] : home_indices[i + 1]
++                ].unsqueeze(0)
++                distance = get_tour_length(tour_locations) + task_time_acc
++                distances.append(distance)
++            # Convert the list of distances to a tensor for easy manipulation
++            distances_tensor = torch.tensor(distances)
++
++            # Find the distance of the longest tour
++            longest_tour_distance = torch.max(distances_tensor)
++            longest_tour_distances.append(longest_tour_distance)
++
++        return torch.tensor(longest_tour_distances)
+diff --git a/rl4co/envs/routing/mtsp_custom/env3.py b/rl4co/envs/routing/mtsp_custom/env3.py
+new file mode 100644
+index 0000000..95616b7
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/env3.py
+@@ -0,0 +1,290 @@
++import math
++
++from typing import Optional
++
++import numpy as np
++import torch
++
++from rl4co.envs.common.utils import batch_to_scalar
++from tensordict.tensordict import TensorDict
++from torchrl.data import BoundedTensorSpec, TensorSpec, UnboundedDiscreteTensorSpec
++
++from rl4co.utils.ops import gather_by_index
++
++from .env_base import MTSPEnvBase
++from .generator3 import MTSPGenerator_Type3
++
++
++class MTSPEnv_Type3(MTSPEnvBase):
++    name = "mtsp3"
++
++    def set_generator(self, generator: MTSPGenerator_Type3, generator_params: dict = {}):
++        if generator is None:
++            generator = MTSPGenerator_Type3(**generator_params)
++        return generator
++
++    def _get_obs_elements(self, generator: MTSPGenerator_Type3) -> dict[str, TensorSpec]:
++        args = self._obs_base_elements(generator)
++        max_dist_between_nodes = math.sqrt(generator.max_loc - generator.min_loc)
++        max_cost = max_dist_between_nodes * generator.max_task_length
++        args["cost_matrix"] = BoundedTensorSpec(
++            low=0,
++            high=max_cost,
++            shape=(
++                generator.num_node_incl_home,
++                generator.num_node_incl_home,
++            ),  # if have start loc generator.num_node_incl_home+generator.max_num_agent
++            dtype=torch.float32,
++        )
++        args["not_visited"] = UnboundedDiscreteTensorSpec(
++            shape=(generator.num_node_incl_home),
++            dtype=torch.bool,
++        )
++        return args
++
++    @staticmethod
++    def _step(td: TensorDict) -> TensorDict:
++        current_node = td["action"]
++        # first_node = current_node if is_first_action else td["first_node"]
++
++        prev_node = td["current_node"].squeeze(-1)
++        current_node = td["action"].squeeze(-1)
++
++        rel_row = gather_by_index(td["cost_matrix"], prev_node)
++        costs = gather_by_index(rel_row, current_node)
++        current_length = td["current_length"] + costs
++
++        # If current_node is the ACTION_END_TOUR, then increment agent_idx
++        ACTION_END_TOUR = 0
++        cur_agent_idx = td["agent_idx"] + (current_node == ACTION_END_TOUR).long()
++
++        # We update the max_subtour_length and reset the current_length
++        max_subtour_length = torch.where(
++            current_length > td["max_subtour_length"],
++            current_length,
++            td["max_subtour_length"],
++        )
++
++        # If current agent is different from previous agent, then we have a new subtour and reset the length
++        current_length *= (cur_agent_idx == td["agent_idx"]).float()
++
++        # The reward is the negative of the max_subtour_length (minmax objective)
++        reward = -max_subtour_length
++
++        # This action contribute to finishing the task
++        not_visited = td["not_visited"]
++        num_node_incl_home = td["num_node_incl_home"][0]
++        doing_task = (current_node != ACTION_END_TOUR) & (
++            current_node < num_node_incl_home
++        )
++        doing_task = doing_task
++        current_task_idx = current_node - 1
++        # not_visited[doing_task][current_task_idx[doing_task]] = 0
++        not_visited[doing_task, 1:] = not_visited[doing_task, 1:].scatter_(
++            1, current_task_idx[doing_task].unsqueeze(-1), 0
++        )
++        all_task_done = (torch.count_nonzero(not_visited[:, 1:], dim=-1) == 0).squeeze(-1)
++        is_end_tour = current_node == ACTION_END_TOUR
++        mask = all_task_done & is_end_tour
++        not_visited[mask, 0] = 0 # Last visit to home depot
++
++        available = td["action_mask"]
++        available[:, 1:num_node_incl_home] = not_visited[:, 1:]  # update avalibalility
++
++        # if the current_node is the ACTION_END_TOUR, make relevant start location be available, and all else unavaliable
++        # is_not_last_agent = cur_agent_idx < (td["num_agent"]-1)
++        is_last_agent = cur_agent_idx == (td["num_agent"] - 1)
++        is_agent = current_node < td["num_agent"]
++        start_loc_idx = cur_agent_idx + num_node_incl_home.expand_as(cur_agent_idx)
++        done = torch.count_nonzero(not_visited, dim=-1) == 0
++        # Cannot do simple slicing because start_loc_idx is an array
++        # Example: available[mask][indices[mask] >= td["num_node_incl_home"][mask].unsqueeze(-1)] = 0 # all start location unavaliable
++
++        mask = is_end_tour & is_agent & torch.logical_not(all_task_done)
++        available[mask, :] = (
++            0  # all task unavaliable and all other start location unavaliable
++        )
++        available[mask, :] = available[mask, :].scatter_(
++            1, start_loc_idx[mask].unsqueeze(-1), 1
++        )  # relevant start location avaliable
++
++        # if current_node is a start location
++        at_start_loc = current_node >= num_node_incl_home
++        mask = at_start_loc & is_last_agent & done
++        available[mask, 0] = 1  # depot avaliable
++        available[mask, 1:] = 0  # all other location unavaliable
++
++        mask = at_start_loc & is_last_agent & torch.logical_not(all_task_done)
++        available[mask, 0] = 0  # depot unavaliable
++        available[mask, num_node_incl_home:] = 0  # all start location unavaliable
++        # all unfinished task avaliable, already set as default
++
++        mask = at_start_loc & torch.logical_not(is_last_agent) & torch.logical_not(all_task_done)
++        available[mask, 0] = 1  # depot avaliable
++        available[mask, num_node_incl_home:] = 0  # all start location unavaliable
++        # all unfinished task avaliable, already set as default
++
++        # We are done if there are no unvisited task
++        available[all_task_done, 0] = (
++            1  # depot avaliable # If done, we make the depot available again, so that it will be selected as the next node with prob 1
++        )
++        available[all_task_done, 1:] = 0  # all other location unavaliable
++
++        td.update(
++            {
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": cur_agent_idx,
++                # "first_node": first_node,
++                "current_node": current_node.unsqueeze(-1),
++                "i": td["i"] + 1,
++                "action_mask": available,
++                "not_visited": not_visited,
++                "reward": reward,
++                "done": done,
++            }
++        )
++
++        return td
++
++    def _reset(self, td: Optional[TensorDict] = None, batch_size=None) -> TensorDict:
++        device = td.device
++
++        # Keep track of the agent number to know when to stop
++        agent_idx = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        # Make variable for max_subtour_length between subtours
++        max_subtour_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++        current_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++
++        # Current node is at Start Loc A
++        current_node = torch.full(
++            (*batch_size,),
++            self.generator.num_node_incl_home,
++            dtype=torch.int64,
++            device=device,
++        )
++        available = torch.zeros(
++            (
++                *batch_size,
++                self.generator.num_node_incl_home + self.generator.max_num_agent,
++            ),
++            dtype=torch.bool,
++            device=device,
++        )  # 1 means not visited, i.e. action is allowed
++
++        available[..., self.generator.num_node_incl_home] = (
++            1  # Start Loc A is available as first node
++        )
++
++        # Tracking which task has been visited
++        not_visited = torch.ones(
++            (*batch_size, self.generator.num_node_incl_home),
++            dtype=torch.bool,
++            device=device,
++        )
++
++        cost_matrix = self.convert_loc_to_cost_matrix(td["locs"])
++
++        num_node_incl_home = torch.full(
++            (*batch_size,),
++            self.generator.num_node_incl_home,
++            dtype=torch.int64,
++            device=device,
++        )
++
++        i = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        return TensorDict(
++            {
++                "locs": td[
++                    "locs"
++                ],  # depot is first node, then tasks, then start location, then padding(home depot) if any
++                "start_locs": td["start_locs"],
++                "num_agent": td["num_agent"],
++                "num_node_incl_home": num_node_incl_home,  # fixed one number only, we only care about td["num_node_incl_home"][0]
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": agent_idx,
++                # "first_node": current_node,
++                "current_node": current_node,
++                "i": i,
++                "action_mask": available,
++                "not_visited": not_visited,
++                "cost_matrix": cost_matrix,
++            },
++            batch_size=batch_size,
++        )
++
++    def get_reward_with_new_locs(self, td=None, actions=None):
++        """
++        Assume GPU is used.
++        Calculate the reward with new locations and same actions. Expected input size:
++        locs: (batch_size, num_loc, 2)
++        actions: (batch_size, num_loc + num_agent)
++        task_lengths: (batch_size, num_loc)
++        """
++        locs = td["locs"]
++        start_locs = td["start_locs"]
++        dummy = locs[:, -1].unsqueeze(1).expand(-1, actions.shape[1] - locs.shape[1], -1)
++        locs = torch.cat((locs, dummy), dim=1)
++        # actions = actions.unsqueeze(-1).expand(-1, -1, locs.shape[2])
++        batch_size = locs.shape[0]
++        mission_times = []
++
++        # Assuming the inputs `start_locs`, `actions`, `task_lengths`, and `locs` are provided
++        if isinstance(actions, np.ndarray):
++            actions = torch.from_numpy(actions)
++        if isinstance(start_locs, np.ndarray):
++            start_locs = torch.from_numpy(start_locs)
++        if isinstance(locs, np.ndarray):
++            locs = torch.from_numpy(locs)
++        # Move to GPU if needed
++        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
++        actions = actions.to(device)
++        start_locs = start_locs.to(device)
++        locs = locs.to(device)
++
++        # Initialize results
++        batch_size = actions.size(0)
++        for batch in range(batch_size):
++            start_loc = start_locs[batch]
++            action = actions[batch]
++
++            # Add zeros at the start and end of the action tensor
++            action = torch.cat([torch.tensor([0], device=device), action, torch.tensor([0], device=device)])
++            loc = locs[batch]
++
++            agent_idx = 0
++            node_idx = 0
++            tour_list = []
++            tour_length = 0
++
++            while node_idx < (action.shape[0] - 1):
++                cur_action = action[node_idx]
++                next_action = action[node_idx + 1]
++
++                if cur_action == 0 and next_action == 0:
++                    tour_length += torch.norm(loc[0] - start_loc[agent_idx])
++                    agent_idx += 1
++                    tour_list.append(tour_length.item())
++                    tour_length = 0
++                elif cur_action == 0 and next_action != 0:
++                    tour_length += (
++                        torch.norm(loc[next_action] - start_loc[agent_idx])
++                    )
++                elif cur_action != 0 and next_action == 0:
++                    tour_length += torch.norm(loc[0] - loc[cur_action])
++                    agent_idx += 1
++                    tour_list.append(tour_length.item())
++                    tour_length = 0
++                else:  # cur_action != 0 and next_action != 0
++                    tour_length += (
++                        torch.norm(loc[next_action] - loc[cur_action])
++                    )
++                node_idx += 1
++
++            longest_tour = max(tour_list)
++            mission_times.append(longest_tour)
++
++        return torch.tensor(mission_times)
+\ No newline at end of file
+diff --git a/rl4co/envs/routing/mtsp_custom/env4.py b/rl4co/envs/routing/mtsp_custom/env4.py
+new file mode 100644
+index 0000000..fc29518
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/env4.py
+@@ -0,0 +1,300 @@
++import math
++
++from typing import Optional
++
++import numpy as np
++import torch
++
++from rl4co.envs.common.utils import batch_to_scalar
++from tensordict.tensordict import TensorDict
++from torchrl.data import BoundedTensorSpec, TensorSpec, UnboundedDiscreteTensorSpec
++
++from rl4co.utils.ops import gather_by_index
++
++from .env_base import MTSPEnvBase
++from .generator4 import MTSPGenerator_Type4
++
++
++class MTSPEnv_Type4(MTSPEnvBase):
++    name = "mtsp4"
++
++    def set_generator(self, generator: MTSPGenerator_Type4, generator_params: dict = {}):
++        if generator is None:
++            generator = MTSPGenerator_Type4(**generator_params)
++        return generator
++
++    def _get_obs_elements(self, generator: MTSPGenerator_Type4) -> dict[str, TensorSpec]:
++        # generator can be MTSPGenerator_Type4 or MTSPGenerator_Type5
++        args = self._obs_base_elements(generator)
++        args["task_length"] = BoundedTensorSpec(
++            low=generator.min_task_length,
++            high=generator.max_task_length,
++            shape=(generator.num_node_incl_home),
++            dtype=torch.float32,
++        )
++        max_dist_between_nodes = math.sqrt(generator.max_loc - generator.min_loc)
++        max_cost = max_dist_between_nodes * generator.max_task_length
++        args["cost_matrix"] = BoundedTensorSpec(
++            low=0,
++            high=max_cost,
++            shape=(
++                generator.num_node_incl_home,
++                generator.num_node_incl_home,
++            ),  # if have start loc generator.num_node_incl_home+generator.max_num_agent
++            dtype=torch.float32,
++        )
++        args["not_visited"] = UnboundedDiscreteTensorSpec(
++            shape=(generator.num_node_incl_home),
++            dtype=torch.bool,
++        )
++        return args
++
++    @staticmethod
++    def _step(td: TensorDict) -> TensorDict:
++        current_node = td["action"]
++        # first_node = current_node if is_first_action else td["first_node"]
++
++        prev_node = td["current_node"].squeeze(-1)
++        current_node = td["action"].squeeze(-1)
++
++        rel_row = gather_by_index(td["cost_matrix"], prev_node)
++        costs = gather_by_index(rel_row, current_node)
++        current_length = td["current_length"] + costs
++
++        # If current_node is the ACTION_END_TOUR, then increment agent_idx
++        ACTION_END_TOUR = 0
++        cur_agent_idx = td["agent_idx"] + (current_node == ACTION_END_TOUR).long()
++
++        # We update the max_subtour_length and reset the current_length
++        max_subtour_length = torch.where(
++            current_length > td["max_subtour_length"],
++            current_length,
++            td["max_subtour_length"],
++        )
++
++        # If current agent is different from previous agent, then we have a new subtour and reset the length
++        current_length *= (cur_agent_idx == td["agent_idx"]).float()
++
++        # The reward is the negative of the max_subtour_length (minmax objective)
++        reward = -max_subtour_length
++
++        # This action contribute to finishing the task
++        not_visited = td["not_visited"]
++        num_node_incl_home = td["num_node_incl_home"][0]
++        doing_task = (current_node != ACTION_END_TOUR) & (
++            current_node < num_node_incl_home
++        )
++        doing_task = doing_task
++        current_task_idx = current_node - 1
++        # not_visited[doing_task][current_task_idx[doing_task]] = 0
++        not_visited[doing_task, 1:] = not_visited[doing_task, 1:].scatter_(
++            1, current_task_idx[doing_task].unsqueeze(-1), 0
++        )
++        all_task_done = (torch.count_nonzero(not_visited[:, 1:], dim=-1) == 0).squeeze(-1)
++        is_end_tour = current_node == ACTION_END_TOUR
++        mask = all_task_done & is_end_tour
++        not_visited[mask, 0] = 0 # Last visit to home depot
++
++        available = td["action_mask"]
++        available[:, 1:num_node_incl_home] = not_visited[:, 1:]  # update avalibalility
++
++        # if the current_node is the ACTION_END_TOUR, make relevant start location be available, and all else unavaliable
++        is_last_agent = cur_agent_idx == (td["num_agent"] - 1)
++        is_agent = current_node < td["num_agent"]
++        start_loc_idx = cur_agent_idx + num_node_incl_home.expand_as(cur_agent_idx)
++        done = torch.count_nonzero(not_visited, dim=-1) == 0
++        # Cannot do simple slicing because start_loc_idx is an array
++        # Example: available[mask][indices[mask] >= td["num_node_incl_home"][mask].unsqueeze(-1)] = 0 # all start location unavaliable
++
++        mask = is_end_tour & is_agent & torch.logical_not(all_task_done)
++        available[mask, :] = (
++            0  # all task unavaliable and all other start location unavaliable
++        )
++        available[mask, :] = available[mask, :].scatter_(
++            1, start_loc_idx[mask].unsqueeze(-1), 1
++        )  # relevant start location avaliable
++
++        # if current_node is a start location
++        at_start_loc = current_node >= num_node_incl_home
++        mask = at_start_loc & is_last_agent & done
++        available[mask, 0] = 1  # depot avaliable
++        available[mask, 1:] = 0  # all other location unavaliable
++
++        mask = at_start_loc & is_last_agent & torch.logical_not(all_task_done)
++        available[mask, 0] = 0  # depot unavaliable
++        available[mask, num_node_incl_home:] = 0  # all start location unavaliable
++        # all unfinished task avaliable, already set as default
++
++        mask = at_start_loc & torch.logical_not(is_last_agent) & torch.logical_not(all_task_done)
++        available[mask, 0] = 1  # depot avaliable
++        available[mask, num_node_incl_home:] = 0  # all start location unavaliable
++        # all unfinished task avaliable, already set as default
++
++        # We are done if there are no unvisited task
++        available[all_task_done, 0] = (
++            1  # depot avaliable # If done, we make the depot available again, so that it will be selected as the next node with prob 1
++        )
++        available[all_task_done, 1:] = 0  # all other location unavaliable
++
++        td.update(
++            {
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": cur_agent_idx,
++                "current_node": current_node.unsqueeze(-1),
++                "i": td["i"] + 1,
++                "action_mask": available,
++                "not_visited": not_visited,
++                "reward": reward,
++                "done": done,
++            }
++        )
++
++        return td
++
++    def _reset(self, td: Optional[TensorDict] = None, batch_size=None) -> TensorDict:
++        device = td.device
++
++        # Keep track of the agent number to know when to stop
++        agent_idx = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        # Make variable for max_subtour_length between subtours
++        max_subtour_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++        current_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++
++        # Current node is at Start Loc A
++        current_node = torch.full(
++            (*batch_size,),
++            self.generator.num_node_incl_home,
++            dtype=torch.int64,
++            device=device,
++        )
++        available = torch.zeros(
++            (
++                *batch_size,
++                self.generator.num_node_incl_home + self.generator.max_num_agent,
++            ),
++            dtype=torch.bool,
++            device=device,
++        )  # 1 means not visited, i.e. action is allowed
++
++        available[..., self.generator.num_node_incl_home] = (
++            1  # Start Loc A is available as first node
++        )
++
++        # Tracking which task has been visited
++        not_visited = torch.ones(
++            (*batch_size, self.generator.num_node_incl_home),
++            dtype=torch.bool,
++            device=device,
++        )
++
++        cost_matrix = self.convert_loc_to_cost_matrix(td["locs"], td["task_length"])
++
++        num_node_incl_home = torch.full(
++            (*batch_size,),
++            self.generator.num_node_incl_home,
++            dtype=torch.int64,
++            device=device,
++        )
++
++        i = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        return TensorDict(
++            {
++                "locs": td[
++                    "locs"
++                ],  # depot is first node, then tasks, then start location, then padding(home depot) if any
++                "start_locs": td["start_locs"],
++                "num_agent": td["num_agent"],
++                "num_node_incl_home": num_node_incl_home,  # fixed one number only, we only care about td["num_node_incl_home"][0]
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": agent_idx,
++                # "first_node": current_node,
++                "current_node": current_node,
++                "i": i,
++                "action_mask": available,
++                "not_visited": not_visited,
++                "cost_matrix": cost_matrix,
++            },
++            batch_size=batch_size,
++        )
++
++    def get_reward_with_new_locs(self, td=None, actions=None):
++        """
++        Assume GPU is used.
++        Calculate the reward with new locations and same actions. Expected input size:
++        locs: (batch_size, num_loc, 2)
++        actions: (batch_size, num_loc + num_agent)
++        task_lengths: (batch_size, num_loc)
++        """
++        locs = td["locs"]
++        start_locs = td["start_locs"]
++        task_lengths = td["task_length"]
++        dummy = locs[:, -1].unsqueeze(1).expand(-1, actions.shape[1] - locs.shape[1], -1)
++        locs = torch.cat((locs, dummy), dim=1)
++        # actions = actions.unsqueeze(-1).expand(-1, -1, locs.shape[2])
++        batch_size = locs.shape[0]
++        mission_times = []
++
++        # Assuming the inputs `start_locs`, `actions`, `task_lengths`, and `locs` are provided
++        if isinstance(actions, np.ndarray):
++            actions = torch.from_numpy(actions)
++        if isinstance(start_locs, np.ndarray):
++            start_locs = torch.from_numpy(start_locs)
++        if isinstance(task_lengths, np.ndarray):
++            task_lengths = torch.from_numpy(task_lengths)
++        if isinstance(locs, np.ndarray):
++            locs = torch.from_numpy(locs)
++        # Move to GPU if needed
++        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
++        actions = actions.to(device)
++        start_locs = start_locs.to(device)
++        task_lengths = task_lengths.to(device)
++        locs = locs.to(device)
++
++        # Initialize results
++        batch_size = actions.size(0)
++        for batch in range(batch_size):
++            start_loc = start_locs[batch]
++            action = actions[batch]
++            task_length = task_lengths[batch]
++
++            # Add zeros at the start and end of the action tensor
++            action = torch.cat([torch.tensor([0], device=device), action, torch.tensor([0], device=device)])
++            loc = locs[batch]
++
++            agent_idx = 0
++            node_idx = 0
++            tour_list = []
++            tour_length = 0
++
++            while node_idx < (action.shape[0] - 1):
++                cur_action = action[node_idx]
++                next_action = action[node_idx + 1]
++
++                if cur_action == 0 and next_action == 0:
++                    tour_length += torch.norm(loc[0] - start_loc[agent_idx])
++                    agent_idx += 1
++                    tour_list.append(tour_length.item())
++                    tour_length = 0
++                elif cur_action == 0 and next_action != 0:
++                    tour_length += (
++                        torch.norm(loc[next_action] - start_loc[agent_idx]) + task_length[next_action]
++                    )
++                elif cur_action != 0 and next_action == 0:
++                    tour_length += torch.norm(loc[0] - loc[cur_action])
++                    agent_idx += 1
++                    tour_list.append(tour_length.item())
++                    tour_length = 0
++                else:  # cur_action != 0 and next_action != 0
++                    tour_length += (
++                        torch.norm(loc[next_action] - loc[cur_action]) + task_length[next_action]
++                    )
++                node_idx += 1
++
++            longest_tour = max(tour_list)
++            mission_times.append(longest_tour)
++
++        return torch.tensor(mission_times)
+\ No newline at end of file
+diff --git a/rl4co/envs/routing/mtsp_custom/env5.py b/rl4co/envs/routing/mtsp_custom/env5.py
+new file mode 100644
+index 0000000..10b2694
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/env5.py
+@@ -0,0 +1,322 @@
++import math
++
++from typing import Optional
++
++import numpy as np
++import torch
++
++from tensordict.tensordict import TensorDict
++from torchrl.data import BoundedTensorSpec, TensorSpec, UnboundedDiscreteTensorSpec
++
++from rl4co.utils.ops import gather_by_index
++
++from .env_base import MTSPEnvBase
++from .generator5 import MTSPGenerator_Type5
++
++
++class MTSPEnv_Type5(MTSPEnvBase):
++    name = "mtsp5"
++
++    def set_generator(self, generator: MTSPGenerator_Type5, generator_params: dict = {}):
++        if generator is None:
++            generator = MTSPGenerator_Type5(**generator_params)
++        return generator
++
++    def _get_obs_elements(self, generator: MTSPGenerator_Type5) -> dict[str, TensorSpec]:
++        # generator can be MTSPGenerator_Type4 or MTSPGenerator_Type5
++        args = self._obs_base_elements(generator)
++        args["task_length"] = BoundedTensorSpec(
++            low=generator.min_task_length,
++            high=generator.max_task_length,
++            shape=(generator.num_node_incl_home),
++            dtype=torch.float32,
++        )
++        max_dist_between_nodes = math.sqrt(generator.max_loc - generator.min_loc)
++        max_cost = max_dist_between_nodes * generator.max_task_length
++        args["cost_matrix"] = BoundedTensorSpec(
++            low=0,
++            high=max_cost,
++            shape=(
++                generator.num_node_incl_home,
++                generator.num_node_incl_home,
++            ),  # if have start loc generator.num_node_incl_home+generator.max_num_agent
++            dtype=torch.float32,
++        )
++        args["not_visited"] = UnboundedDiscreteTensorSpec(
++            shape=(generator.num_node_incl_home),
++            dtype=torch.bool,
++        )
++        return args
++
++    @staticmethod
++    def _step(td: TensorDict) -> TensorDict:
++        def zero2onedim(tensor_scalar):
++            if tensor_scalar.dim() == 0:
++                tensor_scalar = tensor_scalar.unsqueeze(0)
++            return tensor_scalar
++
++        current_node = td["action"]
++
++        prev_node = td["current_node"].squeeze(-1)
++        current_node = td["action"].squeeze(-1)
++
++        rel_row = gather_by_index(td["cost_matrix"], prev_node)
++        costs = gather_by_index(rel_row, current_node)
++        current_length = td["current_length"] + costs
++
++        # If current_node is the ACTION_END_TOUR, then increment agent_idx
++        ACTION_END_TOUR = 0
++        cur_agent_idx = td["agent_idx"] + (current_node == ACTION_END_TOUR).long()
++
++        # We update the max_subtour_length and reset the current_length
++        max_subtour_length = torch.where(
++            current_length > td["max_subtour_length"],
++            current_length,
++            td["max_subtour_length"],
++        )
++        max_subtour_length = zero2onedim(max_subtour_length)
++
++        # If current agent is different from previous agent, then we have a new subtour and reset the length
++        current_length *= (cur_agent_idx == td["agent_idx"]).float()
++
++        # The reward is the negative of the max_subtour_length (minmax objective)
++        reward = -max_subtour_length
++
++        # This action contribute to finishing the task
++        not_visited = td["not_visited"]
++        num_node_incl_home = td["num_node_incl_home"][0]
++        doing_task = (current_node != ACTION_END_TOUR) & (
++            current_node < num_node_incl_home
++        )
++        # Check if the tensor is scalar (torch.Size([]))
++        doing_task = zero2onedim(doing_task)
++
++        current_task_idx = current_node - 1
++        current_task_idx = zero2onedim(current_task_idx)
++        not_visited[doing_task, 1:] = not_visited[doing_task, 1:].scatter_(
++            1, current_task_idx[doing_task].unsqueeze(-1), 0
++        )
++        all_task_done = (torch.count_nonzero(not_visited[:, 1:], dim=-1) == 0).squeeze(-1)
++        all_task_done = zero2onedim(all_task_done)
++        is_end_tour = current_node == ACTION_END_TOUR
++        is_end_tour = zero2onedim(is_end_tour)
++        mask = all_task_done & is_end_tour
++        not_visited[mask, 0] = 0  # Last visit to home depot
++
++        available = td["action_mask"]
++        available[:, 1:num_node_incl_home] = not_visited[:, 1:]  # update avalibalility
++
++        # if the current_node is the ACTION_END_TOUR, make relevant start location be available, and all else unavaliable
++        is_last_agent = cur_agent_idx == (td["num_agent"] - 1)
++        is_agent = current_node < td["num_agent"]
++        start_loc_idx = cur_agent_idx + num_node_incl_home.expand_as(cur_agent_idx)
++        done = torch.count_nonzero(not_visited, dim=-1) == 0
++        # Cannot do simple slicing because start_loc_idx is an array
++        # Example: available[mask][indices[mask] >= td["num_node_incl_home"][mask].unsqueeze(-1)] = 0 # all start location unavaliable
++
++        mask = is_end_tour & is_agent & torch.logical_not(all_task_done)
++        available[mask, :] = (
++            0  # all task unavaliable and all other start location unavaliable
++        )
++        available[mask, :] = available[mask, :].scatter_(
++            1, start_loc_idx[mask].unsqueeze(-1), 1
++        )  # relevant start location avaliable
++
++        # if current_node is a start location
++        at_start_loc = current_node >= num_node_incl_home
++        mask = at_start_loc & is_last_agent & done
++        available[mask, 0] = 1  # depot avaliable
++        available[mask, 1:] = 0  # all other location unavaliable
++
++        mask = at_start_loc & is_last_agent & torch.logical_not(all_task_done)
++        available[mask, 0] = 0  # depot unavaliable
++        available[mask, num_node_incl_home:] = 0  # all start location unavaliable
++        # all unfinished task avaliable, already set as default
++
++        mask = (
++            at_start_loc
++            & torch.logical_not(is_last_agent)
++            & torch.logical_not(all_task_done)
++        )
++        available[mask, 0] = 1  # depot avaliable
++        available[mask, num_node_incl_home:] = 0  # all start location unavaliable
++        # all unfinished task avaliable, already set as default
++
++        # We are done if there are no unvisited task
++        available[all_task_done, 0] = (
++            1  # depot avaliable # If done, we make the depot available again, so that it will be selected as the next node with prob 1
++        )
++        available[all_task_done, 1:] = 0  # all other location unavaliable
++
++        # print(f"avaliable {available}")
++        # _ = input()
++
++        td.update(
++            {
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": cur_agent_idx,
++                # "first_node": first_node,
++                "current_node": current_node.unsqueeze(-1),
++                "i": td["i"] + 1,
++                "action_mask": available,
++                "not_visited": not_visited,
++                "reward": reward,
++                "done": done,
++            }
++        )
++
++        return td
++
++    def _reset(self, td: Optional[TensorDict] = None, batch_size=None) -> TensorDict:
++        device = td.device
++
++        # Keep track of the agent number to know when to stop
++        agent_idx = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        # Make variable for max_subtour_length between subtours
++        max_subtour_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++        current_length = torch.zeros(batch_size, dtype=torch.float32, device=device)
++
++        # Current node is at Start Loc A
++        current_node = torch.full(
++            (*batch_size,),
++            self.generator.num_node_incl_home,
++            dtype=torch.int64,
++            device=device,
++        )
++        available = torch.zeros(
++            (
++                *batch_size,
++                self.generator.num_node_incl_home + self.generator.max_num_agent,
++            ),
++            dtype=torch.bool,
++            device=device,
++        )  # 1 means not visited, i.e. action is allowed
++
++        available[..., self.generator.num_node_incl_home] = (
++            1  # Start Loc A is available as first node
++        )
++
++        # Tracking which task has been visited
++        not_visited = torch.ones(
++            (*batch_size, self.generator.num_node_incl_home),
++            dtype=torch.bool,
++            device=device,
++        )
++
++        cost_matrix = self.convert_loc_to_cost_matrix(td["locs"], td["task_length"])
++
++        num_node_incl_home = torch.full(
++            (*batch_size,),
++            self.generator.num_node_incl_home,
++            dtype=torch.int64,
++            device=device,
++        )
++
++        i = torch.zeros((*batch_size,), dtype=torch.int64, device=device)
++
++        return TensorDict(
++            {
++                "locs": td[
++                    "locs"
++                ],  # depot is first node, then tasks, then start location, then padding(home depot) if any
++                "start_locs": td["start_locs"],
++                "num_agent": td["num_agent"],
++                "num_node_incl_home": num_node_incl_home,  # fixed one number only, we only care about td["num_node_incl_home"][0]
++                "max_subtour_length": max_subtour_length,
++                "current_length": current_length,
++                "agent_idx": agent_idx,
++                "current_node": current_node,
++                "i": i,
++                "action_mask": available,
++                "not_visited": not_visited,
++                "cost_matrix": cost_matrix,
++            },
++            batch_size=batch_size,
++        )
++
++    def get_reward_with_new_locs(self, td=None, actions=None):
++        """
++        Assume GPU is used.
++        Calculate the reward with new locations and same actions. Expected input size:
++        locs: (batch_size, num_loc, 2)
++        actions: (batch_size, num_loc + num_agent)
++        task_lengths: (batch_size, num_loc)
++        """
++        locs = td["locs"]
++        start_locs = td["start_locs"]
++        task_lengths = td["task_length"]
++        dummy = locs[:, -1].unsqueeze(1).expand(-1, actions.shape[1] - locs.shape[1], -1)
++        locs = torch.cat((locs, dummy), dim=1)
++        batch_size = locs.shape[0]
++        mission_times = []
++
++        # Assuming the inputs `start_locs`, `actions`, `task_lengths`, and `locs` are provided
++        if isinstance(actions, np.ndarray):
++            actions = torch.from_numpy(actions)
++        if isinstance(start_locs, np.ndarray):
++            start_locs = torch.from_numpy(start_locs)
++        if isinstance(task_lengths, np.ndarray):
++            task_lengths = torch.from_numpy(task_lengths)
++        if isinstance(locs, np.ndarray):
++            locs = torch.from_numpy(locs)
++        # Move to GPU if needed
++        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
++        actions = actions.to(device)
++        start_locs = start_locs.to(device)
++        task_lengths = task_lengths.to(device)
++        locs = locs.to(device)
++
++        # Initialize results
++        batch_size = actions.size(0)
++        for batch in range(batch_size):
++            start_loc = start_locs[batch]
++            action = actions[batch]
++            task_length = task_lengths[batch]
++
++            # Add zeros at the start and end of the action tensor
++            action = torch.cat(
++                [
++                    torch.tensor([0], device=device),
++                    action,
++                    torch.tensor([0], device=device),
++                ]
++            )
++            loc = locs[batch]
++
++            agent_idx = 0
++            node_idx = 0
++            tour_list = []
++            tour_length = 0
++
++            while node_idx < (action.shape[0] - 1):
++                cur_action = action[node_idx]
++                next_action = action[node_idx + 1]
++
++                if cur_action == 0 and next_action == 0:
++                    tour_length += torch.norm(loc[0] - start_loc[agent_idx])
++                    agent_idx += 1
++                    tour_list.append(tour_length.item())
++                    tour_length = 0
++                elif cur_action == 0 and next_action != 0:
++                    tour_length += (
++                        torch.norm(loc[next_action] - start_loc[agent_idx])
++                        + task_length[next_action]
++                    )
++                elif cur_action != 0 and next_action == 0:
++                    tour_length += torch.norm(loc[0] - loc[cur_action])
++                    agent_idx += 1
++                    tour_list.append(tour_length.item())
++                    tour_length = 0
++                else:  # cur_action != 0 and next_action != 0
++                    tour_length += (
++                        torch.norm(loc[next_action] - loc[cur_action])
++                        + task_length[next_action]
++                    )
++                node_idx += 1
++
++            longest_tour = max(tour_list)
++            mission_times.append(longest_tour)
++
++        return torch.tensor(mission_times)
+\ No newline at end of file
+diff --git a/rl4co/envs/routing/mtsp_custom/env_base.py b/rl4co/envs/routing/mtsp_custom/env_base.py
+new file mode 100644
+index 0000000..62a81dc
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/env_base.py
+@@ -0,0 +1,156 @@
++import torch
++
++from tensordict.tensordict import TensorDict
++from torchrl.data import (
++    BoundedTensorSpec,
++    CompositeSpec,
++    TensorSpec,
++    UnboundedContinuousTensorSpec,
++    UnboundedDiscreteTensorSpec,
++)
++
++from rl4co.envs.common.base import RL4COEnvBase
++from rl4co.utils.ops import get_tour_length
++
++from .generator_base import MTSPGeneratorBase
++from .render import render
++
++
++class MTSPEnvBase(RL4COEnvBase):
++    def __init__(
++        self,
++        generator: MTSPGeneratorBase = None,
++        generator_params: dict = {},
++        cost_type: str = "minmax",
++        **kwargs,
++    ):
++        super().__init__(**kwargs)
++        self.generator = self.set_generator(generator, generator_params)
++        self.cost_type = cost_type
++        self._make_spec(self.generator)
++
++    def set_generator(
++        self,
++        generator: MTSPGeneratorBase,
++        generator_params: dict = {},
++    ):
++        return NotImplementedError
++
++    def normalize_reward(reward, min_reward, max_reward):
++        if max_reward == min_reward:
++            return -1  # Handle edge case where all rewards are the same
++        # Normalize reward between 0 and 1
++        normalized = (reward - min_reward) / (max_reward - min_reward)
++        # Scale to -1 to 0
++        normalized_reward = -1 + normalized
++
++        return normalized_reward
++
++    def _make_spec(self, generator: MTSPGeneratorBase):
++        """Make the observation and action specs from the parameters."""
++        self.observation_spec = CompositeSpec(
++            self._get_obs_elements(generator),
++            shape=(),
++        )
++        self.action_spec = BoundedTensorSpec(
++            shape=(1,),
++            dtype=torch.int64,
++            low=0,
++            high=generator.num_node_incl_home,
++        )
++        self.reward_spec = UnboundedContinuousTensorSpec()
++        self.done_spec = UnboundedDiscreteTensorSpec(dtype=torch.bool)
++
++    def _get_obs_elements(self, generator: MTSPGeneratorBase) -> dict[str, TensorSpec]:
++        args = self._obs_base_elements(generator)
++        # Customize elements
++        return args
++
++    def _obs_base_elements(self, generator: MTSPGeneratorBase):
++        return {
++            "locs": BoundedTensorSpec(
++                low=generator.min_loc,
++                high=generator.max_loc,
++                shape=(generator.num_node_incl_home, 2),
++                dtype=torch.float32,
++            ),
++            "num_agent": UnboundedDiscreteTensorSpec(
++                shape=(1),
++                dtype=torch.int64,
++            ),
++            "agent_idx": UnboundedDiscreteTensorSpec(
++                shape=(1),
++                dtype=torch.int64,
++            ),
++            "current_length": UnboundedContinuousTensorSpec(
++                shape=(1),
++                dtype=torch.float32,
++            ),
++            "max_subtour_length": UnboundedContinuousTensorSpec(
++                shape=(1),
++                dtype=torch.float32,
++            ),
++            "current_node": UnboundedDiscreteTensorSpec(
++                shape=(1),
++                dtype=torch.int64,
++            ),
++            "i": UnboundedDiscreteTensorSpec(
++                shape=(1),
++                dtype=torch.int64,
++            ),
++            "action_mask": UnboundedDiscreteTensorSpec(
++                shape=(generator.num_node_incl_home),
++                dtype=torch.bool,
++            ),
++        }
++
++    def _get_reward(self, td, actions=None) -> TensorDict:
++        def zero2onedim(tensor_scalar):
++            if tensor_scalar.dim() == 0:
++                tensor_scalar = tensor_scalar.unsqueeze(0)
++            return tensor_scalar
++
++        # With minmax, get the maximum distance among subtours, calculated in the model
++        if self.cost_type == "minmax":
++            # return td["reward"].squeeze(-1) # will not work if batch size is 1
++            return zero2onedim(td["reward"].squeeze(-1))
++
++        # With distance, same as TSP
++        elif self.cost_type == "sum":
++            locs = td["locs"]
++            locs_ordered = locs.gather(1, actions.unsqueeze(-1).expand_as(locs))
++            return -get_tour_length(locs_ordered)
++
++        else:
++            raise ValueError(f"Cost type {self.cost_type} not supported")
++
++    def get_reward_with_new_locs(self, td=None, actions=None):
++        return NotImplementedError
++
++    @staticmethod
++    def check_solution_validity(td: TensorDict, actions: torch.Tensor):
++        assert True, "Not implemented"
++
++    @staticmethod
++    def render(td, actions=None, ax=None, long_task=False, reward=None, visualize_task_not_splitted=False):
++        return render(td, actions, ax, long_task, reward, visualize_task_not_splitted)
++
++    def convert_loc_to_cost_matrix(self, locs, task_length=None):
++        # Compute pairwise distances for all locations
++        distances = torch.cdist(locs, locs)
++
++        if task_length is not None:
++            # Add task lengths to the distance matrix
++            cost_matrix = distances + task_length.unsqueeze(1)
++        else:
++            cost_matrix = distances
++
++        # Create a mask of ones with diagonal set to a specified value
++        mask = torch.ones_like(cost_matrix, dtype=torch.bool)
++        mask.diagonal(dim1=-2, dim2=-1).zero_()
++        cost_matrix *= mask
++
++        # From Home Depot to Start Location must be zero cost
++        cost_matrix[:, 0, self.generator.num_node_incl_home :] = 0
++
++        return cost_matrix
+diff --git a/rl4co/envs/routing/mtsp_custom/generator1.py b/rl4co/envs/routing/mtsp_custom/generator1.py
+new file mode 100644
+index 0000000..c360c4e
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/generator1.py
+@@ -0,0 +1,39 @@
++import torch
++
++from tensordict.tensordict import TensorDict
++
++from .generator_base import MTSPGeneratorBase
++
++
++class MTSPGenerator_Type1(MTSPGeneratorBase):
++    def _generate(self, batch_size) -> TensorDict:
++        assert (
++            self.min_discretize_level == self.max_discretize_level == 1
++        ), f"ERROR: Collab is not support, but min discretize_level and max discretize_level is {self.min_discretize_level} and {self.max_discretize_level} instead of 1."
++        assert (
++            self.min_num_task == self.max_num_task == self.num_node
++        ), f"ERROR: Not supported min_num_task {self.min_num_agent} != max_num_task {self.max_num_task} != num_node {self.num_node}"
++        assert (
++            self.min_num_agent == self.max_num_agent
++        ), f"ERROR: Not supported min_num_agent {self.min_num_agent} != max_num_agent {self.max_num_agent}"
++
++        # Sample locations
++        locs = self.loc_sampler.sample(
++            (*batch_size, self.num_node_incl_home, 2)
++        )  # 2 for x, y coordinates
++        locs = torch.round(locs)
++
++        # Sample the number of agents
++        num_agent = torch.randint(
++            self.min_num_agent,
++            self.max_num_agent + 1,
++            size=(*batch_size,),
++        )
++
++        return TensorDict(
++            {
++                "locs": locs,
++                "num_agent": num_agent,
++            },
++            batch_size=batch_size,
++        )
+diff --git a/rl4co/envs/routing/mtsp_custom/generator2.py b/rl4co/envs/routing/mtsp_custom/generator2.py
+new file mode 100644
+index 0000000..9cd2741
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/generator2.py
+@@ -0,0 +1,48 @@
++import torch
++
++from tensordict.tensordict import TensorDict
++
++from .generator_base import MTSPGeneratorBase
++
++
++class MTSPGenerator_Type2(MTSPGeneratorBase):
++    def _generate(self, batch_size) -> TensorDict:
++        assert (
++            self.min_discretize_level == self.max_discretize_level == 1
++        ), f"ERROR: Collab is not support, but min discretize_level and max discretize_level is {self.min_discretize_level} and {self.max_discretize_level} instead of 1."
++        assert (
++            self.min_num_task == self.max_num_task == self.num_node
++        ), f"ERROR: Not supported min_num_task {self.min_num_agent} != max_num_task {self.max_num_task} != num_node {self.num_node}"
++        assert (
++            self.min_num_agent == self.max_num_agent
++        ), f"ERROR: Not supported min_num_agent {self.min_num_agent} != max_num_agent {self.max_num_agent}"
++
++        # Sample locations
++        locs = self.loc_sampler.sample(
++            (*batch_size, self.num_node_incl_home, 2)
++        )  # 2 for x, y coordinates
++        locs = torch.round(locs)
++
++        # Sample the number of agents
++        num_agent = torch.randint(
++            self.min_num_agent,
++            self.max_num_agent + 1,
++            size=(*batch_size,),
++        )
++
++        # Sample task length
++        task_length = (self.max_task_length - self.min_task_length) * torch.rand(
++            *batch_size, self.num_node_incl_home
++        ) + self.min_task_length
++        task_length = torch.round(task_length)
++        # Set home base's task length to zero
++        task_length[..., 0] = 0
++
++        return TensorDict(
++            {
++                "locs": locs,
++                "num_agent": num_agent,
++                "task_length": task_length,
++            },
++            batch_size=batch_size,
++        )
+diff --git a/rl4co/envs/routing/mtsp_custom/generator3.py b/rl4co/envs/routing/mtsp_custom/generator3.py
+new file mode 100644
+index 0000000..75a5440
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/generator3.py
+@@ -0,0 +1,43 @@
++import torch
++
++from tensordict.tensordict import TensorDict
++
++from .generator_base import MTSPGeneratorBase
++
++
++class MTSPGenerator_Type3(MTSPGeneratorBase):
++    def _generate(self, batch_size) -> TensorDict:
++        assert (
++            self.min_discretize_level == self.max_discretize_level == 1
++        ), f"ERROR: Collab is not support, but min discretize_level and max discretize_level is {self.min_discretize_level} and {self.max_discretize_level} instead of 1."
++        assert (
++            self.min_num_task == self.max_num_task == self.num_node
++        ), f"ERROR: Not supported min_num_task {self.min_num_agent} != max_num_task {self.max_num_task} != num_node {self.num_node}"
++        assert (
++            self.min_num_agent == self.max_num_agent
++        ), f"ERROR: Not supported min_num_agent {self.min_num_agent} != max_num_agent {self.max_num_agent}"
++
++        # Sample the number of agents
++        num_agent = torch.randint(
++            self.min_num_agent,
++            self.max_num_agent + 1,
++            size=(*batch_size,),
++        )
++
++        # Sample locations
++        locs = self.loc_sampler.sample(
++            (*batch_size, self.num_node_incl_home + self.max_num_agent, 2)
++        )  # 2 for x, y coordinates
++        locs = torch.round(locs)
++        # Use home depot as padding for extra locations
++        locs = self.pad_locations(locs, num_agent)
++        start_locs = locs[:, self.num_node_incl_home :, :]
++
++        return TensorDict(
++            {
++                "locs": locs,  # [batch_size, num_node_incl_home + num_agent, 2]
++                "num_agent": num_agent,
++                "start_locs": start_locs,  # Not neccessary just easier for evaluation, already included in locs
++            },
++            batch_size=batch_size,
++        )
+diff --git a/rl4co/envs/routing/mtsp_custom/generator4.py b/rl4co/envs/routing/mtsp_custom/generator4.py
+new file mode 100644
+index 0000000..d19c697
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/generator4.py
+@@ -0,0 +1,53 @@
++import torch
++
++from tensordict.tensordict import TensorDict
++
++from .generator_base import MTSPGeneratorBase
++
++
++class MTSPGenerator_Type4(MTSPGeneratorBase):
++    def _generate(self, batch_size) -> TensorDict:
++        assert (
++            self.min_discretize_level == self.max_discretize_level == 1
++        ), f"ERROR: Collab is not support, but min discretize_level and max discretize_level is {self.min_discretize_level} and {self.max_discretize_level} instead of 1."
++        assert (
++            self.min_num_task == self.max_num_task == self.num_node
++        ), f"ERROR: Not supported min_num_task {self.min_num_agent} != max_num_task {self.max_num_task} != num_node {self.num_node}"
++        assert (
++            self.min_num_agent == self.max_num_agent
++        ), f"ERROR: Not supported min_num_agent {self.min_num_agent} != max_num_agent {self.max_num_agent}"
++
++        # Sample the number of agents
++        num_agent = torch.randint(
++            self.min_num_agent,
++            self.max_num_agent + 1,
++            size=(*batch_size,),
++        )
++
++        # Sample locations
++        locs = self.loc_sampler.sample(
++            (*batch_size, self.num_node_incl_home + self.max_num_agent, 2)
++        )  # 2 for x, y coordinates
++        locs = torch.round(locs)
++        # Use home depot as padding for extra locations
++        locs = self.pad_locations(locs, num_agent)
++        start_locs = locs[:, self.num_node_incl_home :, :]
++
++        # Sample task length
++        task_length = (self.max_task_length - self.min_task_length) * torch.rand(
++            *batch_size, self.num_node_incl_home + self.max_num_agent
++        ) + self.min_task_length
++        task_length = torch.round(task_length)
++        # Set home base's task length to zero, And padding task length to zero
++        task_length[..., 0] = 0
++        task_length[..., self.num_node_incl_home :] = 0
++
++        return TensorDict(
++            {
++                "locs": locs,
++                "num_agent": num_agent,
++                "task_length": task_length,
++                "start_locs": start_locs,  # Not neccessary just easier for evaluation, already included in locs
++            },
++            batch_size=batch_size,
++        )
+diff --git a/rl4co/envs/routing/mtsp_custom/generator5.py b/rl4co/envs/routing/mtsp_custom/generator5.py
+new file mode 100644
+index 0000000..6af588d
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/generator5.py
+@@ -0,0 +1,211 @@
++import torch
++
++from tensordict.tensordict import TensorDict
++
++from .generator_base import MTSPGeneratorBase
++
++PADDING_TASK_LEN = -1
++
++
++class MTSPGenerator_Type5(MTSPGeneratorBase):
++    def check_collab_status(self):
++        # assert self.min_discretize_level == self.max_discretize_level == 1, f"ERROR: Collab is not support, but min discretize_level and max discretize_level is {self.min_discretize_level} and {self.max_discretize_level} instead of 1."
++        # assert self.min_num_task ==  self.max_num_task == self.num_node, f"ERROR: Not supported min_num_task {self.min_num_agent} != max_num_task {self.max_num_task} != num_node {self.num_node}"
++        # assert self.min_num_agent == self.max_num_agent, f"ERROR: Not supported min_num_agent {self.min_num_agent} != max_num_agent {self.max_num_agent}"
++        pass
++
++    def _generate(self, batch_size) -> TensorDict:
++        self.check_collab_status()
++
++        # Sample the number of agents
++        num_agent = torch.randint(
++            self.min_num_agent,
++            self.max_num_agent + 1,
++            size=(*batch_size,),
++        )
++
++        # Sample the number of tasks (uniquely located)
++        num_task = torch.randint(
++            self.min_num_task,
++            self.max_num_task + 1,
++            size=(*batch_size,),
++        )
++
++        if self.discretize_levels:
++            # Normal distribution among the supplied discretize levels
++            indexs = torch.multinomial(
++                torch.tensor(self.discretize_levels), (*batch_size,), replacement=True
++            )
++            discretize_levels_distribution = torch.index_select(
++                self.discretize_levels, 0, indexs
++            )
++        else:
++            discretize_levels_distribution = torch.randint(
++                self.min_discretize_level,
++                self.max_discretize_level + 1,
++                size=(*batch_size,),
++            )
++
++        # Debug setting. Assume batch_size = 5
++        # num_agent = torch.tensor([6,1,3,3,3])
++        # num_task = torch.tensor([6,3,2,3,4])
++        # # discretize_levels_distribution = torch.tensor([1,1,1,1,1])
++        # discretize_levels_distribution = torch.tensor([4,3,3,3,3])
++
++        # Sample locations
++        locs = self.loc_sampler.sample(
++            (*batch_size, self.num_node_incl_home + self.max_num_agent, 2)
++        )  # 2 for x, y coordinates
++        locs = torch.round(locs)
++        # Use home depot as padding for extra locations
++        locs = self.pad_locations(locs, num_agent)
++        start_locs = locs[:, self.num_node_incl_home :, :]
++
++        # Sample task length
++        task_length = (self.max_task_length - self.min_task_length) * torch.rand(
++            *batch_size, self.num_node_incl_home + self.max_num_agent
++        ) + self.min_task_length
++        task_length = torch.round(task_length)
++
++        # Set home base's task length to zero, And padding task length to zero. Those are the extra node for the agent start locations.
++        task_length[..., 0] = 0
++        task_length[..., self.num_node_incl_home :] = 0
++        unsplited_task_length = task_length.clone()
++        unsplited_task_length[..., self.num_node_incl_home :] = PADDING_TASK_LEN
++
++        (
++            locs[..., : self.num_node_incl_home, :],
++            task_length[..., : self.num_node_incl_home],
++            unsplited_task_length[..., : self.num_node_incl_home],
++        ) = self.format_locs_tl(
++            locs[..., : self.num_node_incl_home, :],
++            num_task,
++            task_length[..., : self.num_node_incl_home],
++            discretize_levels_distribution,
++            unsplited_task_length[..., : self.num_node_incl_home],
++            *batch_size,
++        )
++
++        return TensorDict(
++            {
++                "locs": locs,
++                "num_task": num_task,
++                "num_agent": num_agent,
++                "task_length": task_length,
++                "unsplited_task_length": unsplited_task_length,
++                "discretize_levels_distribution": discretize_levels_distribution,
++                "start_locs": start_locs,  # Not neccessary just easier for evaluation, already included in locs
++            },
++            batch_size=batch_size,
++        )
++
++    def format_locs_tl(
++        self,
++        locs,
++        num_task,
++        task_length,
++        discretize_levels_distribution,
++        unsplited_task_length,
++        batch_size,
++    ):
++        split_sample = discretize_levels_distribution > 1
++        remainder = torch.zeros((batch_size)).type(torch.float32)
++        torch.remainder(
++            num_task[split_sample],
++            discretize_levels_distribution[split_sample],
++            out=remainder[split_sample],
++        )
++        tl_adjustments = torch.ones((batch_size, self.num_node)).type(torch.float32)
++        tl_adjustments[split_sample] = self.create_tl_adjustment(
++            remainder[split_sample],
++            num_task[split_sample],
++            discretize_levels_distribution[split_sample],
++        )
++
++        unique_num_tasks = torch.unique(num_task)
++        # print(f"[DEBUG] unique_num_tasks: {unique_num_tasks}")
++        for unique_num_task in unique_num_tasks:
++            if unique_num_task == 0:
++                # 0 means no task
++                continue
++            relevant_idx = torch.where(num_task == unique_num_task, True, False).nonzero(
++                as_tuple=True
++            )[0]
++            # print("self.num_node", self.num_node)
++            # print("num_unique_task", num_unique_task)
++            num_repeat = int(
++                self.num_node // unique_num_task + 1
++            )  # in theory should be same as discretize distribution, but here we max out the repeatition, and cover it up later with home depot
++            # print(f"[DEBUG] num_repeat: {num_repeat}")
++            # print(f"[DEBUG] unique num task: {unique_num_task}")
++            repeated_loc = locs[relevant_idx, 1 : (unique_num_task + 1), :].repeat(
++                1, num_repeat, 1
++            )[:, : self.num_node, :]
++            # print(f"[DEBUG] repeated_loc: {repeated_loc}")
++            # print(f"[DEBUG] relevant_idx: {relevant_idx}")
++            locs[relevant_idx, 1:, :] = repeated_loc
++            # print(f"[DEBUG] locs: {locs[relevant_idx]}")
++
++            unsplited_task_length[relevant_idx, 0 : (unique_num_task + 1)] = task_length[
++                relevant_idx, 0 : (unique_num_task + 1)
++            ]
++            unsplited_task_length[relevant_idx, (unique_num_task + 1) :] = (
++                torch.ones_like(
++                    unsplited_task_length[relevant_idx, (unique_num_task + 1) :]
++                )
++                * PADDING_TASK_LEN
++            )
++
++            repeated_tl = task_length[relevant_idx, 1 : (unique_num_task + 1)].repeat(
++                1, num_repeat
++            )[:, : self.num_node]
++            task_length[relevant_idx, 1:] = repeated_tl * tl_adjustments[relevant_idx]
++
++        # Pad with home depot
++        mask = ~(
++            torch.arange(self.num_node + 1).unsqueeze(0)
++            < (num_task * discretize_levels_distribution + 1).unsqueeze(1)
++        )
++        # print(f"[DEBUG] mask: {mask}")
++        loc_mask = mask.unsqueeze(2).expand_as(locs)
++        locs[loc_mask] = locs[:, 0].unsqueeze(1).expand(-1, locs.shape[1], -1)[loc_mask]
++        task_length[mask] = torch.zeros_like(task_length[mask])
++        unsplited_task_length_mask = ~(
++            torch.arange(self.num_node + 1).unsqueeze(0) < (num_task + 1).unsqueeze(1)
++        )
++        # print(f"[DEBUG] unsplited_task_length_mask: {unsplited_task_length_mask}")
++        unsplited_task_length[unsplited_task_length_mask] = (
++            torch.ones_like(task_length[unsplited_task_length_mask]) * PADDING_TASK_LEN
++        )
++
++        return locs, task_length, unsplited_task_length
++
++    def create_tl_adjustment(self, remainder, splits, discretize_by):
++        # Create a range tensor to help generate the base patterns
++        batch_size = remainder.shape[0]
++        masks = torch.ones((batch_size, self.num_node))
++        # Get the positions in the masks to replace with the weights
++        for i in range(batch_size):
++            r, s, a = int(remainder[i]), int(splits[i]), int(discretize_by[i])
++            # print(f"r:{r}, s{s} a{a}")
++            base_pattern = torch.tensor([1 / (a + 1)] * r + [1 / (a)] * (s - r))
++            repeat = (
++                torch.ceil(torch.Tensor([self.num_node / base_pattern.shape[0]]))
++                .type(torch.int64)
++                .item()
++            )
++            pattern = base_pattern.repeat(repeat)[
++                : self.num_node
++            ]  # make sure pattern is the same length as self.num_node
++            masks[i] = pattern
++        return masks
++
++    def generate_array_with_ratio(
++        self, shape, percentage_of_split_task=0.25, valid_case_mask=None
++    ):
++        # Generate a random array with values between 0 and 1
++        random_array = torch.rand(shape)
++        # Create a mask where True represents Split and False represents No Split
++        mask = torch.zeros(shape, dtype=torch.bool)  # by default is False
++        mask[valid_case_mask] = random_array[valid_case_mask] < percentage_of_split_task
++        return torch.where(mask, True, False)
+diff --git a/rl4co/envs/routing/mtsp_custom/generator_base.py b/rl4co/envs/routing/mtsp_custom/generator_base.py
+new file mode 100644
+index 0000000..cc999d5
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/generator_base.py
+@@ -0,0 +1,166 @@
++import math
++
++from typing import Callable, Union
++
++import numpy as np
++import torch
++
++from tensordict.tensordict import TensorDict
++from torch.distributions import Uniform
++
++from rl4co.data.utils import save_tensordict_to_npz
++from rl4co.envs.common.utils import Generator, get_sampler
++from rl4co.utils.pylogger import get_pylogger
++
++log = get_pylogger(__name__)
++
++PADDING_TASK_LEN = -1
++
++
++class MTSPGeneratorBase(Generator):
++    """Data generator for the Multiple Travelling Salesman Problem (mTSP).
++
++    Args:
++        num_node: number of locations (customers) in the TSP
++        min_loc: minimum value for the location coordinates
++        max_loc: maximum value for the location coordinates
++        loc_distribution: distribution for the location coordinates
++        min_num_agent: minimum number of agents (vehicles), include
++        max_num_agent: maximum number of agents (vehicles), include
++
++    Returns:
++        A TensorDict with the following keys:
++            locs [batch_size, num_node, 2]: locations of each customer
++            num_agent [batch_size]: number of agents (vehicles)
++    """
++
++    def __init__(
++        self,
++        seed: int = None,
++        num_node: int = 4,  # equal to num task
++        min_num_task: int = 4,
++        max_num_task: int = 4,
++        min_loc: float = 0.0,
++        max_loc: float = 10.0,
++        loc_distribution: Union[int, float, str, type, Callable] = Uniform,
++        min_num_agent: int = 5,
++        max_num_agent: int = 5,
++        # Extra Parameters
++        average_task_length: int = 10,  # sec
++        min_task_length: int = 1,  # sec
++        max_task_length: int = 10,  # sec
++        discretize_levels: list = None,  # [1, 3] if discretize_levels list exist, will ignore min_discretize_level and max_discretize_level
++        min_discretize_level: int = 1,
++        max_discretize_level: int = 1,
++        **kwargs,
++    ):
++        if seed is not None:
++            self.set_seed(seed)
++        self.min_num_task = min_num_task
++        self.max_num_task = max_num_task
++        self.num_node = num_node
++        self.num_node_incl_home = num_node + 1
++        self.discretize_levels = discretize_levels
++        if self.discretize_levels is None:
++            self.min_discretize_level = min_discretize_level
++            self.max_discretize_level = max_discretize_level
++        else:
++            self.min_discretize_level = min(self.discretize_levels)
++            self.max_discretize_level = max(self.discretize_levels)
++        self.max_useful_node = (
++            self.max_num_task * self.max_discretize_level
++        )  # No home base
++        self.max_useful_node_incl_home = self.max_useful_node + 1
++        assert (
++            self.num_node_incl_home >= self.max_useful_node + 1
++        ), f"[ERROR] Number of node [{self.num_node_incl_home}] must be greater than the number of task (max) [{self.max_num_task}] * discretize level (max) [{self.max_discretize_level}] + 1"
++
++        self.min_loc = min_loc
++        self.max_loc = max_loc
++        self.min_num_agent = min_num_agent
++        self.max_num_agent = max_num_agent
++        self.average_task_length = average_task_length
++        self.min_task_length = min_task_length
++        self.max_task_length = max_task_length
++
++        # Location distribution
++        if kwargs.get("loc_sampler", None) is not None:
++            self.loc_sampler = kwargs["loc_sampler"]
++        else:
++            self.loc_sampler = get_sampler(
++                "loc", loc_distribution, min_loc, max_loc, **kwargs
++            )
++
++        self.loc_diagonal = math.sqrt(2) * (
++            self.max_loc - self.min_loc
++        )  # diagonal of the square
++
++    def _generate(self, batch_size) -> TensorDict:
++        return NotImplementedError
++
++    @staticmethod
++    def save_data(td: TensorDict, path, compress: bool = False):
++        import os
++
++        os.makedirs(os.path.dirname(path), exist_ok=True)
++        save_tensordict_to_npz(td, path)
++
++    def set_seed(self, seed: int):
++        """
++        Set the seed for reproducibility.
++
++        Args:
++            seed (int): The seed value to set.
++        """
++        import random
++
++        random.seed(seed)
++        np.random.seed(seed)
++        torch.manual_seed(seed)
++        if torch.cuda.is_available():
++            torch.cuda.manual_seed(seed)
++            torch.cuda.manual_seed_all(seed)
++        # Ensure that all operations are deterministic on GPU (if used) for cuDNN
++        torch.backends.cudnn.deterministic = True
++        torch.backends.cudnn.benchmark = False
++
++    def normalised_loc(self, coordinates):
++        # Find the min and max values along the x and y dimensions
++        min_value = coordinates.min()
++        max_value = coordinates.max()
++        # Normalize the coordinates
++        normalized_coordinates = (
++            self.max_loc * (coordinates - min_value) / (max_value - min_value)
++        )
++        return normalized_coordinates
++
++    def pad_locations(self, locs, num_agents):
++        """
++        Pad locations with the first location of each batch where needed - vectorized version
++        Used for Env 3 onwards
++        """
++        batch_size = locs.shape[0]
++        total_length = locs.shape[1]
++
++        # Calculate valid lengths for all batches at once
++        valid_lengths = self.num_node_incl_home + num_agents  # shape: [batch_size]
++
++        # Create a mask where True indicates positions that need padding
++        # arange creates sequence [0, 1, ..., num_node_incl_home-1] for each batch
++        position_indices = torch.arange(total_length, device=locs.device).expand(
++            batch_size, -1
++        )  # [batch_size, total_length]
++        padding_mask = position_indices >= valid_lengths.unsqueeze(
++            1
++        )  # [batch_size, total_length]
++
++        # Expand the first location of each batch to match the shape needed for padding
++        home_depots = locs[:, 0, :].unsqueeze(1)  # [batch_size, 1, 2]
++
++        # Use the mask to combine original locations and padding
++        locs = torch.where(padding_mask.unsqueeze(-1), home_depots, locs)
++
++        return locs
++
++    def get_start_locs(self, locs):
++        return locs[:, self.num_node_incl_home :, :]
+\ No newline at end of file
+diff --git a/rl4co/envs/routing/mtsp_custom/render.py b/rl4co/envs/routing/mtsp_custom/render.py
+new file mode 100644
+index 0000000..e672104
+--- /dev/null
++++ b/rl4co/envs/routing/mtsp_custom/render.py
+@@ -0,0 +1,141 @@
++import matplotlib.pyplot as plt
++import numpy as np
++import torch
++from itertools import cycle
++from matplotlib import colormaps
++import matplotlib.lines as mlines
++
++from rl4co.utils.pylogger import get_pylogger
++
++log = get_pylogger(__name__)
++
++def to_tensor(action, dtype=torch.long):
++    if isinstance(action, torch.Tensor):
++        return action.to(dtype)
++    elif isinstance(action, np.ndarray):
++        return torch.from_numpy(action).to(dtype)
++    elif isinstance(action, list):
++        return torch.tensor(action, dtype=dtype)
++    else:
++        raise TypeError(f"Unsupported type: {type(action)}")
++
++
++def render(td, actions=None, ax=None, long_task=False, reward=None, visualize_task_not_splitted=True):
++    def discrete_cmap(num, base_cmap="nipy_spectral"):
++        base = colormaps[base_cmap]
++        color_list = base(np.linspace(0, 1, num))
++        return base.from_list(base.name + str(num), color_list, num)
++
++    if actions is None:
++        actions = td.get("action", None)
++
++    actions = to_tensor(actions, dtype=torch.int64)
++
++    if td.batch_size != torch.Size([]):
++        td = td[0]
++        actions = actions[0]
++
++    num_agent = td["num_agent"]
++    locs = td["locs"]
++    start_locs = td.get("start_locs", None)
++    cmap = discrete_cmap(num_agent, "rainbow")
++
++    if ax is None:
++        fig, ax = plt.subplots(figsize=(7, 7))
++
++    actions = torch.cat([
++        torch.zeros(1, dtype=torch.int64),
++        actions,
++        torch.zeros(1, dtype=torch.int64),
++    ])
++
++    # Track if we already added legend label
++    labels_added = {"Depot": False, "Tasks": False, "Start": False}
++
++    task_lengths = td.get("task_length", None)
++    if visualize_task_not_splitted:
++        task_lengths = td.get("unsplited_task_length", None)
++    task_marker_size = cycle(task_lengths)
++
++    for i, loc in enumerate(locs):
++        if i == 0:
++            marker, color, label = "s", "black", "Depot"
++        else:
++            color = "tab:grey" if (i == 1 and long_task) else "black"
++            marker, label = "o", "Tasks"
++
++        ax.plot(
++            loc[0], loc[1],
++            color=color,
++            marker=marker,
++            markersize=10 if i == 0 else next(task_marker_size),
++            label=label if not labels_added[label] else ""
++        )
++        labels_added[label] = True
++
++        if i == 0:
++            ax.text(loc[0] + 0.1, loc[1] + 0.1, "Depot", fontsize=10)
++        # If you want to label tasks with their indices or task lengths, uncomment the following lines
++        # else:
++        #     ax.text(loc[0] + 0.1, loc[1] + 0.1, f"Task {i}", fontsize=8)
++        #     if task_lengths is not None:
++        #         ax.text(loc[0] + 0.1, loc[1] - 0.3, f"Time {task_lengths[i]:.2f}", fontsize=8)
++
++    if start_locs is not None:
++        for i, loc in enumerate(start_locs):
++            ax.plot(
++                loc[0], loc[1],
++                color="black",
++                marker="^",
++                markersize=9,
++                label="Start" if not labels_added["Start"] else ""
++            )
++            labels_added["Start"] = True
++            ax.text(loc[0] + 0.1, loc[1] + 0.1, f"Start {i}", fontsize=8)
++
++    agent_idx = 0
++    for i in range(len(actions)):
++        if actions[i] == 0:
++            if agent_idx >= num_agent:
++                break
++            from_loc = start_locs[agent_idx] if start_locs is not None else locs[0]
++            agent_idx += 1
++        else:
++            from_loc = locs[actions[i]]
++
++        if i >= len(actions) - 1:
++            break
++
++        if actions[i + 1] == 0:
++            to_node = 0
++        else:
++            to_node = actions[i + 1]
++
++        to_loc = locs[to_node]
++        color = cmap(agent_idx - 1)
++
++        ax.plot([from_loc[0], to_loc[0]], [from_loc[1], to_loc[1]], color=color, linewidth=2)
++        ax.annotate(
++            "",
++            xy=(to_loc[0], to_loc[1]),
++            xytext=(from_loc[0], from_loc[1]),
++            arrowprops=dict(arrowstyle="->", color=color),
++            annotation_clip=False
++        )
++
++    # Create a custom legend handle for "Task\n(size=Task Length)"
++    task_handle = mlines.Line2D([], [], color='black', marker='o', linestyle='None', markersize=6, label='Task\n(size=Task Length)')
++    handles, labels = ax.get_legend_handles_labels()
++    unique = dict(zip(labels, handles))
++    # Add the custom entry
++    unique['Task\n(size=Task Length)'] = task_handle
++    unique.pop("Tasks", None)
++    ax.legend(unique.values(), unique.keys(), loc="best", fontsize=8)
++    ax.set_title(f"Mission Time(s): {reward:.2f}" if reward else "mTSP", fontsize=12)
++    ax.set_xlim(-0.5, 10.5)
++    ax.set_ylim(-0.5, 10.5)
++    ax.set_xlabel("meter")
++    ax.set_ylabel("meter")
++    ax.set_aspect("equal", adjustable="box")
++    plt.tight_layout()
++    return
+\ No newline at end of file
+diff --git a/rl4co/models/nn/env_embeddings/context.py b/rl4co/models/nn/env_embeddings/context.py
+index 56e286f..94db21f 100644
+--- a/rl4co/models/nn/env_embeddings/context.py
++++ b/rl4co/models/nn/env_embeddings/context.py
+@@ -32,6 +32,13 @@ def env_context_embedding(env_name: str, config: dict) -> nn.Module:
+         "pdp": PDPContext,
+         "mdcpdp": MDCPDPContext,
+         "mtsp": MTSPContext,
++        "mtsp1": MTSPContext,
++        "mtsp2": MTSPContext,
++        "mtsp3": MTSPContext,
++        "mtsp4": MTSPContext,
++        "mtsp5": MTSPContext,
++        "mtsp6": MTSPContext,
++        "mtsp7": MTSPContext,
+         "smtwtp": SMTWTPContext,
+         "mtvrp": MTVRPContext,
+         "shpp": TSPContext,
+@@ -277,7 +284,7 @@ class MTSPContext(EnvContext):
+     def _state_embedding(self, embeddings, td):
+         dynamic_feats = torch.stack(
+             [
+-                (td["num_agents"] - td["agent_idx"]).float(),
++                (td["num_agent"] - td["agent_idx"]).float(),
+                 td["current_length"],
+                 td["max_subtour_length"],
+                 self._distance_from_depot(td),
+diff --git a/rl4co/models/nn/env_embeddings/dynamic.py b/rl4co/models/nn/env_embeddings/dynamic.py
+index 470af83..71555c5 100644
+--- a/rl4co/models/nn/env_embeddings/dynamic.py
++++ b/rl4co/models/nn/env_embeddings/dynamic.py
+@@ -31,6 +31,11 @@ def env_dynamic_embedding(env_name: str, config: dict) -> nn.Module:
+         "mdpp": StaticEmbedding,
+         "pdp": StaticEmbedding,
+         "mtsp": StaticEmbedding,
++        "mtsp1": StaticEmbedding,
++        "mtsp2": StaticEmbedding,
++        "mtsp3": StaticEmbedding,
++        "mtsp4": StaticEmbedding,
++        "mtsp5": StaticEmbedding,
+         "smtwtp": StaticEmbedding,
+         "jssp": JSSPDynamicEmbedding,
+         "fjsp": JSSPDynamicEmbedding,
+diff --git a/rl4co/models/nn/env_embeddings/edge.py b/rl4co/models/nn/env_embeddings/edge.py
+index be50f9a..42525e6 100644
+--- a/rl4co/models/nn/env_embeddings/edge.py
++++ b/rl4co/models/nn/env_embeddings/edge.py
+@@ -38,6 +38,10 @@ def env_edge_embedding(env_name: str, config: dict) -> nn.Module:
+         "mdpp": TSPEdgeEmbedding,
+         "pdp": TSPEdgeEmbedding,
+         "mtsp": TSPEdgeEmbedding,
++        "mtsp2": ATSPEdgeEmbedding,
++        "mtsp3": ATSPEdgeEmbedding,
++        "mtsp4": ATSPEdgeEmbedding,
++        "mtsp5": ATSPEdgeEmbedding,
+         "smtwtp": NoEdgeEmbedding,
+         "shpp": TSPEdgeEmbedding,
+     }
+diff --git a/rl4co/models/nn/env_embeddings/init.py b/rl4co/models/nn/env_embeddings/init.py
+index 1d0202c..f2a19f8 100644
+--- a/rl4co/models/nn/env_embeddings/init.py
++++ b/rl4co/models/nn/env_embeddings/init.py
+@@ -34,6 +34,11 @@ def env_init_embedding(env_name: str, config: dict) -> nn.Module:
+         "pdp_ruin_repair": TSPInitEmbedding,
+         "tsp_kopt": TSPInitEmbedding,
+         "mtsp": MTSPInitEmbedding,
++        "mtsp1": MTSPInitEmbedding,
++        "mtsp2": MTSPwithTLInitEmbedding,
++        "mtsp3": MTSPInitEmbedding,
++        "mtsp4": MTSPwithTLInitEmbedding,
++        "mtsp5": MTSPwithTLInitEmbedding,
+         "smtwtp": SMTWTPInitEmbedding,
+         "mdcpdp": MDCPDPInitEmbedding,
+         "fjsp": FJSPInitEmbedding,
+@@ -390,6 +395,30 @@ class MTSPInitEmbedding(nn.Module):
+         node_embedding = self.init_embed(td["locs"][..., 1:, :])
+         return torch.cat([depot_embedding, node_embedding], -2)
+ 
++class MTSPwithTLInitEmbedding(nn.Module):
++    """Initial embedding for the Multiple Traveling Salesman Problem (mTSP). Reference from VRPInitEmbedding
++    Embed the following node features to the embedding space:
++        - locs: x, y coordinates of the nodes (depot, cities)
++        - task length for each nodes
++    TODO: not working yet
++    """
++
++    def __init__(self, embed_dim, linear_bias=True):
++        super(MTSPwithTLInitEmbedding, self).__init__()
++        node_dim = 3  # x, y, tl
++        self.init_embed = nn.Linear(node_dim, embed_dim, linear_bias)
++        self.init_embed_depot = nn.Linear(2, embed_dim, linear_bias)  # depot embedding
++
++    def forward(self, td):
++        depot, cities = td["locs"][:, :1, :], td["locs"][:, 1:, :]
++        tl = td["task_length"][:, 1:]
++        depot_embedding = self.init_embed_depot(depot)
++        node_embeddings = self.init_embed(
++            torch.cat((cities, tl[..., None]), -1)
++        )
++        out = torch.cat((depot_embedding, node_embeddings), -2)
++        return out
++
+ 
+ class SMTWTPInitEmbedding(nn.Module):
+     """Initial embedding for the Single Machine Total Weighted Tardiness Problem (SMTWTP).
+diff --git a/rl4co/utils/ops.py b/rl4co/utils/ops.py
+index 8249ec6..28d16c1 100644
+--- a/rl4co/utils/ops.py
++++ b/rl4co/utils/ops.py
+@@ -122,7 +122,7 @@ def get_num_starts(td, env_name=None):
+         num_starts = (
+             num_starts - 1
+         ) // 2  # only half of the nodes (i.e. pickup nodes) can be start nodes
+-    elif env_name in ["cvrp", "cvrptw", "sdvrp", "mtsp", "op", "pctsp", "spctsp"]:
++    elif env_name in ["cvrp", "cvrptw", "sdvrp", "mtsp", "mtsp1", "mtsp2", "mtsp3", "mtsp4", "mtsp5", "op", "pctsp", "spctsp"]:
+         num_starts = num_starts - 1  # depot cannot be a start node
+ 
+     return num_starts
+diff --git a/rl4co/utils/test_utils.py b/rl4co/utils/test_utils.py
+index 3e4d585..35ed304 100644
+--- a/rl4co/utils/test_utils.py
++++ b/rl4co/utils/test_utils.py
+@@ -35,6 +35,16 @@ def get_env(name, size):
+             env = OPEnv(generator_params=dict(num_loc=size))
+         case "mtsp":
+             env = MTSPEnv(generator_params=dict(num_loc=size))
++        case "mtsp1":
++            env = MTSPEnv(generator_params=dict(num_loc=size))
++        case "mtsp2":
++            env = MTSPEnv(generator_params=dict(num_loc=size))
++        case "mtsp3":
++            env = MTSPEnv(generator_params=dict(num_loc=size))
++        case "mtsp4":
++            env = MTSPEnv(generator_params=dict(num_loc=size))
++        case "mtsp5":
++            env = MTSPEnv(generator_params=dict(num_loc=size))
+         case "pctsp":
+             env = PCTSPEnv(generator_params=dict(num_loc=size))
+         case "spctsp":
+diff --git a/tests/test_policy.py b/tests/test_policy.py
+index da81318..020809d 100644
+--- a/tests/test_policy.py
++++ b/tests/test_policy.py
+@@ -14,6 +14,11 @@ from rl4co.utils.test_utils import generate_env_data
+         "cvrptw",
+         "sdvrp",
+         "mtsp",
++        "mtsp1",
++        "mtsp2",
++        "mtsp3",
++        "mtsp4",
++        "mtsp5",
+         "op",
+         "pctsp",
+         "spctsp",
+-- 
+2.15.0
+

@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "graph_attention_replanner"
+version = "0.0.0"
+description = "Graph Attention Replanner"
+authors = ["Elim Kwan <ekwan@turing.ac.uk>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pytorch-lightning = "2.3.0"
+sko = "0.5.7"
+wandb = "0.13.11"
+numpy = "1.26.4"
+tensordict = "*"
+svgpath2mpl = "*"
+scikit-opt = "0.6.5"
+lkh = "*"
+tsplib95 = "*"
+pandas = "*"
+seaborn = "*"
+pre-commit = "*"
+dask = "*"
+nicegui = "*"
+bs4 = "*"
+plotly = "*"
+ipywidgets = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

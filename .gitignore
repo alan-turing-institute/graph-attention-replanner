@@ -1,0 +1,7 @@
+cache/
+external/LKH-3.0.10/
+*.DS_Store
+*.pyc
+*.venv
+__pycache__
+lightning_logs/

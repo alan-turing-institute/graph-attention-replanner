@@ -1,0 +1,3 @@
+[submodule "external/rl4co"]
+	path = external/rl4co
+	url = https://github.com/ai4co/rl4co.git

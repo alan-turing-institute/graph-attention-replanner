@@ -1,0 +1,26 @@
+batch_size: 10
+val_batch_size: null
+test_batch_size: null
+train_data_size: 1000
+val_data_size: 100
+test_data_size: 10000
+optimizer: Adam
+optimizer_kwargs:
+  lr: 1.0e-05
+lr_scheduler: null
+lr_scheduler_kwargs:
+  milestones:
+  - 80
+  - 95
+  gamma: 0.1
+lr_scheduler_interval: epoch
+lr_scheduler_monitor: val/reward
+generate_default_data: false
+shuffle_train_dataloader: false
+dataloader_num_workers: 0
+data_dir: data/
+log_on_step: true
+metrics: {}
+baseline: rollout
+baseline_kwargs: {}
+reward_scale: null

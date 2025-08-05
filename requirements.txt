@@ -1,0 +1,14 @@
+pytorch-lightning==2.3.0
+sko==0.5.7
+wandb==0.13.11
+numpy==1.26.4
+tensordict
+svgpath2mpl
+scikit-opt==0.6.5
+lkh
+tsplib95
+pre-commit
+nicegui
+bs4
+plotly
+ipywidgets

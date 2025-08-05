@@ -1,0 +1,1 @@
+from graph_attention_replanner.method.gat.eval_gat_get_details import get_gat_details
