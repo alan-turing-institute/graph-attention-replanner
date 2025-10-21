@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import numpy as np
 import torch
 from rl4co.models import REINFORCE
+from rl4co.utils.ops import batchify
 from tensordict.tensordict import TensorDict
 import plotly.graph_objects as go
 import math
@@ -426,9 +427,9 @@ class MissionPlot:
             time = 0
             while time < rounded_max_time:
                 if current_task_time[agent_idx] > 0:  # Doing Task
-                    print(
-                        f"[DEBUG] t={time}/{rounded_max_time} Agent {agent_idx} Doing Task: {actions[agent_idx][current_node[agent_idx]]} Remaining Task Time: {current_task_time[agent_idx]}"
-                    )
+                    # print(
+                    #     f"[DEBUG] t={time}/{rounded_max_time} Agent {agent_idx} Doing Task: {actions[agent_idx][current_node[agent_idx]]} Remaining Task Time: {current_task_time[agent_idx]}"
+                    # )
                     current_task_time[agent_idx] -= dt
                     self.cached_task_time[
                         actions[agent_idx][current_node[agent_idx]]
@@ -445,9 +446,9 @@ class MissionPlot:
                     direction = end - start
                     distance = np.linalg.norm(direction)
                     if distance <= 0:
-                        print(
-                            f"[DEBUG] t={time}/{rounded_max_time} Agent {agent_idx} Do Nth"
-                        )
+                        # print(
+                        #     f"[DEBUG] t={time}/{rounded_max_time} Agent {agent_idx} Do Nth"
+                        # )
                         # Dont count time, Dont add pos to trace
                         current_node[agent_idx] += 1
                         current_task_time[agent_idx] = task_times[
@@ -459,9 +460,9 @@ class MissionPlot:
                         new_pos = positions[agent_idx] + step
                         distance_to_task = np.linalg.norm(new_pos - end)
                         # If close enough to target, snap to target and switch to next task
-                        print(
-                            f"[DEBUG] t={time}/{rounded_max_time} Agent {agent_idx} Traversing To Task: {actions[agent_idx][current_node[agent_idx] + 1]} Distance to task: {distance_to_task} Task Time: {current_task_time[agent_idx]}"
-                        )
+                        # print(
+                        #     f"[DEBUG] t={time}/{rounded_max_time} Agent {agent_idx} Traversing To Task: {actions[agent_idx][current_node[agent_idx] + 1]} Distance to task: {distance_to_task} Task Time: {current_task_time[agent_idx]}"
+                        # )
                         if distance_to_task < speed * dt:
                             new_pos = end
                             current_node[agent_idx] += 1
@@ -471,9 +472,9 @@ class MissionPlot:
                         positions[agent_idx] = new_pos.tolist()
                         time += dt
                 else:
-                    print(
-                        f"[DEBUG] t={time}/{rounded_max_time} Agent {agent_idx} Finished All Tasks"
-                    )
+                    # print(
+                    #     f"[DEBUG] t={time}/{rounded_max_time} Agent {agent_idx} Finished All Tasks"
+                    # )
                     # positions[agent_idx] = locs[actions[agent_idx][current_node[agent_idx]]].tolist() # Stay at last node
                     positions[agent_idx] = None
                     time += dt
@@ -735,12 +736,12 @@ def parse_input_data(agents, tasks, discretize_level):
     start_locs = agents.reshape(1, num_agent, 2)
     task_original = tasks[:, :2].reshape(1, num_task, 2) * scale_factor
     task_original = np.round(task_original, 1)
-    print("[DEBUG] task_original", task_original)
+    # print("[DEBUG] task_original", task_original)
 
     locs = np.repeat(task_original, discretize_level, axis=0).reshape(
         1, num_task * discretize_level, 2
     )
-    print("[DEBUG] locs", locs)
+    # print("[DEBUG] locs", locs)
 
     # Add home depot to locs then pad up to 24
     locs = np.concatenate((home_depot, locs), axis=1)
@@ -776,6 +777,8 @@ def parse_input_data(agents, tasks, discretize_level):
         },
         batch_size=1,
     )
+
+    td = batchify(td, 2)
     return td
 
 

@@ -1,4 +1,6 @@
-# On-board Mission Replanning for Adaptive Cooperative Multi-Robot Systems
+# Onboard Mission Replanning for Adaptive Cooperative Multi-Robot Systems
+
+[Link to Paper](https://arxiv.org/abs/2506.06094)
 
 Cooperative autonomous robotic systems have significant potential for executing complex multi-task missions across space, air, ground, and maritime domains. But they commonly operate in remote, dynamic and hazardous environments, requiring rapid in-mission adaptation without reliance on fragile or slow communication links to centralised compute. Fast, on-board replanning algorithms are therefore needed to enhance resilience. Reinforcement Learning shows strong promise for efficiently solving mission planning tasks when formulated as Travelling Salesperson Problems (TSPs), but existing methods: 1) are unsuitable for replanning, where agents do not start at a single location; 2) do not allow cooperation between agents; 3) are unable to model tasks with variable durations; or 4) lack practical considerations for on-board deployment. Here we define the Cooperative Mission Replanning Problem (CMRP) as a novel variant of multiple TSP with adaptations to overcome these issues, and develop a new encoder/decoder-based model using Graph Attention Networks and Attention Models to solve it effectively and efficiently. Using a simple example of cooperative drones, we show our replanner (GATR) consistently (90% of the time) maintains performance within 10% of the state-of-the-art LKH3 heuristic solver, whilst running 85-370 times faster on a Raspberry Pi. This work paves the way for increased resilience in autonomous multi-agent systems.
 ![Introducing the CMRP problem](./assets/images/concept_intro.png)
@@ -99,7 +101,7 @@ Set up the model at the right place.
 ```bash
 mkdir -p ${SETUP_DIR}/graph-attention-replanner/cache/checkpoints/algo_reinforce
 cd ${SETUP_DIR}/graph-attention-replanner
-cp -a ./assets/checkpoints_demo/problem5_node24_task1to6_dislevel1to4_agent1to6_seed0_20241230232757 ./cache/checkpoints/algo_reinforce
+cp -a ./assets/checkpoints_demo/problem5_node24_task1to6_dislevel1to4_agent1to6_seed0_20251020215410 ./cache/checkpoints/algo_reinforce
 ```
 
 Serve the demo website.
@@ -119,10 +121,10 @@ References:
 [1] Federico Berto, Chuanbo Hua, Junyoung Park, Laurin Luttmann, Yining Ma, Fanchen Bu, Jiarui Wang, Haoran Ye, Minsu Kim, Sanghyeok Choi, Nayeli Gast Zepeda, André Hottung, Jianan Zhou, Jieyi Bi, Yu Hu, Fei Liu, Hyeonah Kim, Jiwoo Son, Haeyeon Kim, Davide Angioni, Wouter Kool, Zhiguang Cao, Qingfu Zhang, Joungho Kim, Jie Zhang, Kĳung Shin, Cathy Wu, Sungsoo Ahn, Guojie Song, Changhyun Kwon, Kevin Tierney, Lin Xie, & Jinkyoo Park. (2024). RL4CO: an Extensive Reinforcement Learning for Combinatorial Optimization Benchmark.
 
 # Citation
-If you find our project valuable for your research:
+If you find our project valuable for your research, please cite our paper:
 ```latex
 @misc{kwan2025onboardmissionreplanningadaptive,
-      title={On-board Mission Replanning for Adaptive Cooperative Multi-Robot Systems}, 
+      title={Onboard Mission Replanning for Adaptive Cooperative Multi-Robot Systems}, 
       author={Elim Kwan and Rehman Qureshi and Liam Fletcher and Colin Laganier and Victoria Nockles and Richard Walters},
       year={2025},
       eprint={2506.06094},
