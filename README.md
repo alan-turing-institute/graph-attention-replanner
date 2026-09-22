@@ -73,8 +73,9 @@ conda activate replanner
 ```bash
 cd ${SETUP_DIR}/graph-attention-replanner
 pip install --upgrade pip
-pip install -e . 
 pip install -e ./external/rl4co
+pip install -e . 
+pip install -r requirements.txt
 ```
 
 6) Install [LKH3-3.0.10](http://akira.ruc.dk/~keld/research/LKH-3/). [Optional, only if you want to test out LKH3, not required in the demo]
