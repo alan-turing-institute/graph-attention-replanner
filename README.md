@@ -111,7 +111,7 @@ python demo.py
 ```
 
 # Support
-Email the [author](ekwan@turing.ac.uk) for more support.
+Email the [author](elimylkwan@gmail.com) for more support.
 
 # Authors and acknowledgment
 This repo is written by Elim Kwan and Rehman Qureshi. This work was supported by the Turing’s Defence and Security programme through a partnership with Dstl. This work was partially supported by an international internship on behalf of the Science, Mathematics, and Research for Transformation (SMART) Scholarship-for-Service Program within the OUSD/R&E (The Under Secretary of Defense-Research and Engineering), National Defense Education Program (NDEP) / BA-1, Basic Research. The computations described in this research were performed using the Baskerville Tier 2 HPC service (https://www.baskerville.ac.uk/). Baskerville was funded by the EPSRC and UKRI through the World Class Labs scheme (EP/T022221/1) and the Digital Research Infrastructure programme (EP/W032244/1) and is operated by Advanced Research Computing at the University of Birmingham. This work has been submitted to the IEEE for possible publication. Copyright may be transferred without notice, after which this version may no longer be accessible.
